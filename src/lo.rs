@@ -1,16 +1,18 @@
 use postgres::Connection;
 use postgres::types::Oid;
-use postgres_large_object::{LargeObjectExt, LargeObjectTransactionExt, Mode};
+use postgres_large_object::{LargeObjectTransactionExt, Mode};
 use std::fmt;
 use std::fs;
 use std::io;
 use std::io::Read;
 use std::mem;
+#[cfg(feature = "try_from")]
 use std::convert::TryInto;
 use serialize::hex::ToHex;
 use common::Result;
 use mktemp::Temp;
 use sha2::{Digest, Sha256};
+use base64;
 
 pub enum Data { // TODO: look at memory footprint
     Vector(Vec<u8>),
@@ -57,16 +59,20 @@ impl Lo {
         }
     }
 
-    pub fn get_sha1(&self) -> &Vec<u8> {
+    pub fn sha1(&self) -> &Vec<u8> {
         &self.sha1
     }
 
-    pub fn get_sha1_hex(&self) -> String {
+    pub fn sha1_hex(&self) -> String {
         self.sha1.to_hex()
     }
 
-    pub fn get_sha2(&self) -> Option<&Vec<u8>> {
+    pub fn sha2(&self) -> Option<&Vec<u8>> {
         self.sha2.as_ref()
+    }
+
+    pub fn sha2_base64(&self) -> Option<String> {
+        self.sha2.as_ref().map(|h| base64::encode(&h))
     }
 
   //  pub fn generate_sha2(&mut self) -> Option<&Vec<u8>> {
@@ -90,17 +96,15 @@ impl Lo {
         mem::replace(&mut self.data, Data::None)
     }
 
-    pub fn get_lo_data(&self) -> &Data {
+    pub fn lo_data(&self) -> &Data {
         &self.data
     }
 
     pub fn retrieve_lo_data(&mut self, conn: &Connection, size_threshold: i64) -> Result<&Data> {
-        if !self.data.is_none() {
-            Ok(&self.data)
-        } else {
+        if self.data.is_none() {
             self.data = self.retrieve_lo_data_internal(conn, size_threshold)?;
-            Ok(&self.data)
-        }
+        };
+        Ok(&self.data)
     }
 
     fn retrieve_lo_data_internal(&mut self, conn: &Connection, size_threshold: i64) -> Result<Data> {
@@ -110,7 +114,13 @@ impl Lo {
 
         let data = if self.size <= size_threshold {
             // read to memory
-            let mut data = Vec::with_capacity(self.size.try_into().unwrap()); // FIXME: can this panic with real-life data?
+            #[cfg(feature = "try_from")]
+            let size = self.size.try_into().unwrap();
+
+            #[cfg(not(feature = "try_from"))]
+            let size = self.size as usize;
+
+            let mut data = Vec::with_capacity(size); // FIXME: can this panic with real-life data?
             io::copy(&mut sha2_reader, &mut data)?;
             Data::Vector(data)
         } else {

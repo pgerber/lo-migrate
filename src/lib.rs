@@ -1,7 +1,7 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 
-#![feature(try_from)]
+// #![feature(try_from)]
 
 // #![warn(missing_docs)]
 #![deny(unused_must_use)]
@@ -15,17 +15,23 @@
 #![deny(private_in_public)]
 #![deny(unused_must_use)]
 #![deny(while_true)]
-#![forbid(unsafe_code)]
 
+extern crate aws_sdk_rust;
 extern crate mktemp;
 extern crate postgres;
 extern crate postgres_large_object;
 extern crate rustc_serialize as serialize;
 extern crate sha1;
 extern crate sha2;
+extern crate memmap;
+extern crate hyper;
+extern crate base64;
 
 pub mod common;
 pub mod lo;
 pub mod retrieve;
+pub mod store;
 
 pub use common::Result;
+pub use aws_sdk_rust::aws::s3;
+pub use aws_sdk_rust::aws;
