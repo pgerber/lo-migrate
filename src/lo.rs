@@ -118,7 +118,7 @@ impl Lo {
             Data::File(temp_file)
         };
 
-        self.sha2 = Some(sha2_reader.sha2());
+        self.sha2 = Some(sha2_reader.hash());
         Ok(data)
     }
 }
@@ -162,7 +162,7 @@ impl<'a, D> DigestReader<'a, D> where D: Digest + Default {
         }
     }
 
-    fn sha2(self) -> Vec<u8> {
+    fn hash(self) -> Vec<u8> {
         self.hasher.result().into_iter().collect()  // FIXME: is there a better way than copying the result?
     }
 }
