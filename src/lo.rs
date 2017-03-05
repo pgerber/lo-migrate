@@ -190,7 +190,7 @@ mod tests {
         assert_eq!(&buf, b"12345");
         assert_eq!(sha2_reader.read(&mut buf).unwrap(), 4);
         assert_eq!(&buf[..4], b"6789");
-        assert_hash_correct(&sha2_reader.sha2(), data);
+        assert_hash_correct(&sha2_reader.hash(), data);
     }
 
     fn assert_hash_correct(hash: &[u8], data: &[u8]) {
