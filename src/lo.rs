@@ -97,7 +97,7 @@ impl Lo {
     fn retrieve_lo_data_internal(&mut self, conn: &Connection, size_threshold: i64) -> Result<Data> {
         let trans = conn.transaction()?;
         let mut large_object = trans.open_large_object(self.oid, Mode::Read)?;
-        let mut sha2_reader = Sha2Reader::new(&mut large_object);
+        let mut sha2_reader: DigestReader<Sha256> = DigestReader::new(&mut large_object);
 
         let data = if self.size <= size_threshold {
             // read to memory
@@ -149,15 +149,15 @@ impl fmt::Debug for Lo {
 }
 
 /// Wrap a Reader to be able to calculate the sha2 hash while reading
-struct Sha2Reader<'a> {
-    hasher: Sha256,
+struct DigestReader<'a, D> where D: Digest {
+    hasher: D,
     inner:  &'a mut Read
 }
 
-impl<'a> Sha2Reader<'a> {
+impl<'a, D> DigestReader<'a, D> where D: Digest + Default {
     fn new<T>(inner: &'a mut T) -> Self where T: Read {
-        Sha2Reader {
-            hasher: Sha256::new(),
+        DigestReader {
+            hasher: Default::default(),
             inner: inner
         }
     }
@@ -167,7 +167,7 @@ impl<'a> Sha2Reader<'a> {
     }
 }
 
-impl<'a> Read for Sha2Reader<'a> {
+impl<'a, D> Read for DigestReader<'a, D> where D: Digest {
     fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
         let size = self.inner.read(&mut buf)?;
         self.hasher.input(&buf[..size]);
@@ -184,7 +184,7 @@ mod tests {
     fn sha2_reader_partially_stale_buffer() {
         let data = b"123456789";
         let mut inner_reader = &data[..];
-        let mut sha2_reader = Sha2Reader::new(&mut inner_reader);
+        let mut sha2_reader: DigestReader<Sha256> = DigestReader::new(&mut inner_reader);
         let mut buf = [0; 5];
         assert_eq!(sha2_reader.read(&mut buf).unwrap(), 5);
         assert_eq!(&buf, b"12345");
