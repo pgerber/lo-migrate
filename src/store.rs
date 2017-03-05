@@ -40,11 +40,10 @@ impl Lo {
     {
         let lo_data = &self.take_lo_data();
         match lo_data {
-            // TODO:
-            // Our AWS S3 library takes `&[u8]` as object content, it really should use trait `Read`. To avoid excessive
-            // memory use, the file is mapped into memory for now.
-
             &Data::File(ref temp) => {
+                // TODO:
+                // Our AWS S3 library takes `&[u8]` as object content, it really should use trait `Read`. To avoid excessive
+                // memory use, the file is mapped into memory for now.
                 let mapped_file = Mmap::open_path(temp.as_ref(), Protection::Read)?;
 
                 let data = unsafe {

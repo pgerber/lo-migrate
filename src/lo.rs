@@ -75,19 +75,6 @@ impl Lo {
         self.sha2.as_ref().map(|h| base64::encode(&h))
     }
 
-  //  pub fn generate_sha2(&mut self) -> Option<&Vec<u8>> {
-  //      if self.sha2.is_some() {
-  //          self.sha2.as_ref()
-  //      } else if let Some(data) = self.data.as_ref() {
-  //          let mut hasher = Sha256::new();
-  //          hasher.input(data);
-  //          self.sha2 = Some(hasher.result().into_iter().collect());  // FIXME: is there a better way than copying the result?
-  //          self.sha2.as_ref()
-  //      } else {
-  //          None
-  //      }
-  //  }
-
     pub fn lo_size(&self) -> i64 {
         self.size
     }
@@ -120,7 +107,7 @@ impl Lo {
             #[cfg(not(feature = "try_from"))]
             let size = self.size as usize;
 
-            let mut data = Vec::with_capacity(size); // FIXME: can this panic with real-life data?
+            let mut data = Vec::with_capacity(size);
             io::copy(&mut sha2_reader, &mut data)?;
             Data::Vector(data)
         } else {

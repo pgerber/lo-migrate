@@ -7,7 +7,6 @@ use postgres::types::Oid;
 use serialize::hex::FromHex;
 
 pub struct LoRetriever<'a> {
-    conn: &'a Connection,
     rows: Rows<'a>
 }
 
@@ -17,22 +16,18 @@ impl<'a> LoRetriever<'a> {
         let rows = conn.query("SELECT hash, data, size FROM _nice_binary where sha2 is NULL LIMIT $1", &[&max_results])?;
 
         Ok(LoRetriever {
-            conn: conn,
             rows: rows
         })     
     }
 
     pub fn iter<'b>(&'b self) -> Iter<'b> {
         Iter {
-            conn: self.conn,
             rows: self.rows.iter()
         }
     }
 }
 
 pub struct Iter<'a> {
-    #[allow(dead_code)] // FIXME: still needed?
-    conn: &'a Connection,
     rows: rows::Iter<'a>
 }
 
