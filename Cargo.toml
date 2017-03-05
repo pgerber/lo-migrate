@@ -17,6 +17,8 @@ mktemp = "*"
 memmap = "*"
 hyper = "*"
 base64 = "*"
+log = "*"
+env_logger = "*"
 
 [features]
 default = []

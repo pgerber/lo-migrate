@@ -26,6 +26,8 @@ extern crate sha2;
 extern crate memmap;
 extern crate hyper;
 extern crate base64;
+#[macro_use]
+extern crate log;
 
 pub mod common;
 pub mod lo;

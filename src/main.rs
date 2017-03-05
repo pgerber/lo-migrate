@@ -4,12 +4,16 @@
 extern crate lo_migrate;
 extern crate postgres;
 extern crate two_lock_queue;
+#[macro_use]
+extern crate log;
+extern crate env_logger;
 
 use postgres::{Connection, TlsMode};
 use lo_migrate::retrieve::LoRetriever;
 use two_lock_queue as queue;
 
 fn main() {
+    env_logger::init().unwrap();
     // let db = "nice2_ecap_pege_20170304_s3_migration";
     // let db = "nice2_master_pege_20170304_s3_migration_1";
     let db = "nice2_ecap";
