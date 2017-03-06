@@ -20,11 +20,14 @@ base64 = "*"
 log = "*"
 env_logger = "*"
 url = "*"
-lazy_static = "*"
+
+[replace]
+# doesn't build Rust Nightly but we need nightly for the atomic integers
+"lsio:0.1.17" = { git = "https://github.com/pgerber/lsio", branch = "nightly_0_1_17" }
 
 [features]
 default = []
-# dev = ["clippy"]
+dev = ["clippy"]
 
 [[bin]]
 name = "lo_migrate_cli"
