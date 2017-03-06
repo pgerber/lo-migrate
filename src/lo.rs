@@ -14,9 +14,17 @@ use mktemp::Temp;
 use sha2::{Digest, Sha256};
 use base64;
 
+/// Large Object Stored in memory on in a temporary file
 pub enum Data { // TODO: look at memory footprint
+    /// Large Object stored in memory
     Vector(Vec<u8>),
+
+    /// Large Object stored in a temporary file
     File(Temp),
+
+    /// Largo Object not (yet) available
+    ///
+    /// See [`Lo::retrieve_lo_data`] for show to retrieve it.
     None
 }
 
@@ -40,15 +48,28 @@ impl Data {
     }
 }
 
+/// Representation of a Large Object
 pub struct Lo {
+    /// sha1 hash of object
     sha1: Vec<u8>,
+
+    /// Postgres object ID
     oid:  Oid,
+
+    /// sha2 hash
+    ///
+    /// Only available if Large Object has been retrieved. Set by [`Lo::retrieve_lo_data`].
     sha2: Option<Vec<u8>>,
+
+    /// Large Object binary data
     data: Data,
+
+    /// Size of Large Object according to Nice2 database (column _nice_binary.size)
     size: i64,
 }
 
 impl Lo {
+    /// create new [`Lo`].
     pub fn new(sha1: Vec<u8>, oid: Oid, size: i64) -> Lo {
         Lo {
             sha1: sha1,
@@ -59,34 +80,54 @@ impl Lo {
         }
     }
 
+    /// sha1 hash of Large Object
     pub fn sha1(&self) -> &Vec<u8> {
         &self.sha1
     }
 
+    /// sha1 hash in lower-case hexadecimal representation.
+    ///
+    /// Example hash: `"da39a3ee5e6b4b0d3255bfef95601890afd80709"`
     pub fn sha1_hex(&self) -> String {
         self.sha1.to_hex()
     }
 
+    /// sha2 256 bit hash
     pub fn sha2(&self) -> Option<&Vec<u8>> {
         self.sha2.as_ref()
     }
 
+    /// sha2 hash encoded as base64
+    ///
+    /// Example hash: `"2jmj7l5rSw0yVb/vlWAYkK/YBwk="`
     pub fn sha2_base64(&self) -> Option<String> {
         self.sha2.as_ref().map(|h| base64::encode(&h))
     }
 
+    /// Size of Large Object (as stored in _nice_binary.size)
     pub fn lo_size(&self) -> i64 {
         self.size
     }
 
+    /// Take data and move ownership to caller.
+    ///
+    /// Data stored in [`Lo`] is replaced by [`Data::None`].
     pub fn take_lo_data(&mut self) -> Data {
         mem::replace(&mut self.data, Data::None)
     }
 
+    /// Get reference to [`Data`]
     pub fn lo_data(&self) -> &Data {
         &self.data
     }
 
+    /// Retrieve Large Object data
+    ///
+    /// Retrieve Large Object from Postgres and store in memory if its size is less or equal
+    /// `size_threshold` or write it to a temporary file if larger.
+    ///
+    /// If Large Object has already been retrieved `size_threshold` is ignored and a reference
+    /// to the already existing [`Data`] is returned.
     pub fn retrieve_lo_data(&mut self, conn: &Connection, size_threshold: i64) -> Result<&Data> {
         if self.data.is_none() {
             self.data = self.retrieve_lo_data_internal(conn, size_threshold)?;
@@ -148,7 +189,7 @@ impl fmt::Debug for Lo {
     }
 }
 
-/// Wrap a Reader to be able to calculate the sha2 hash while reading
+/// Reader that wraps another reader and calculates the hash of the data passed throught it.
 struct DigestReader<'a, D> where D: Digest {
     hasher: D,
     inner:  &'a mut Read
@@ -162,6 +203,9 @@ impl<'a, D> DigestReader<'a, D> where D: Digest + Default {
         }
     }
 
+    /// Returns the hash of all data passed through the reader
+    ///
+    /// This operation consumes the reader.
     fn hash(self) -> Vec<u8> {
         self.hasher.result().into_iter().collect()  // FIXME: is there a better way than copying the result?
     }
