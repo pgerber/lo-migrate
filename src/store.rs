@@ -45,8 +45,8 @@ impl Lo {
         where P: AwsCredentialsProvider
     {
         let lo_data = &self.take_lo_data();
-        match lo_data {
-            &Data::File(ref temp) => {
+        match *lo_data {
+            Data::File(ref temp) => {
                 // TODO:
                 // Our AWS S3 library takes `&[u8]` as object content, it really should use trait `Read`. To avoid excessive
                 // memory use, the file is mapped into memory for now.
@@ -58,12 +58,12 @@ impl Lo {
                     // file without manual intervention.
                     mapped_file.as_slice()
                 };
-                self.store_read_data(&data, &manager)
+                self.store_read_data(data, manager)
             },
-            &Data::Vector(ref data) => {
-                self.store_read_data(&data, &manager)
+            Data::Vector(ref data) => {
+               self.store_read_data(data, manager)
             },
-            &Data::None => panic!()  // FIXME: shouldn't be possible but should be handled anyway
+            Data::None => panic!()  // FIXME: shouldn't be possible but should be handled anyway
         }
     }
 

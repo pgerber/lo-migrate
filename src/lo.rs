@@ -30,17 +30,17 @@ pub enum Data { // TODO: look at memory footprint
 
 impl fmt::Debug for Data {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &Data::Vector(ref v) => write!(fmt, "Vector(0x{}...)", &v[..4].to_hex()),
-            &Data::File(ref f) => write!(fmt, "File({:?})", f.as_ref()),
-            &Data::None => write!(fmt, "None")
+        match *self {
+            Data::Vector(ref v) => write!(fmt, "Vector(0x{}...)", &v[..4].to_hex()),
+            Data::File(ref f) => write!(fmt, "File({:?})", f.as_ref()),
+            Data::None => write!(fmt, "None")
         }
     }
 }
 
 impl Data {
     fn is_none(&self) -> bool {
-        if let &Data::None = self {
+        if let Data::None = *self {
             true
         } else {
             false
@@ -105,7 +105,7 @@ impl Lo {
     ///
     /// Example hash: `"2jmj7l5rSw0yVb/vlWAYkK/YBwk="`
     pub fn sha2_base64(&self) -> Option<String> {
-        self.sha2.as_ref().map(|h| base64::encode(&h))
+        self.sha2.as_ref().map(|h| base64::encode(h))
     }
 
     /// Size of Large Object (as stored in _nice_binary.size)
@@ -155,6 +155,8 @@ impl Lo {
             let size = self.size.try_into().unwrap();
 
             #[cfg(not(feature = "try_from"))]
+            #[allow(cast_possible_truncation)]
+            #[allow(cast_sign_loss)]
             let size = self.size as usize;
 
             let mut data = Vec::with_capacity(size);
@@ -248,7 +250,7 @@ mod tests {
 
     fn assert_hash_correct(hash: &[u8], data: &[u8]) {
         let mut hasher = Sha256::new();
-        hasher.input(&data);
+        hasher.input(data);
         assert_eq!(hash[..], hasher.result()[..]);
     }
 }

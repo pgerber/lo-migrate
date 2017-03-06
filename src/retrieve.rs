@@ -20,7 +20,7 @@ impl<'a> LoRetriever<'a> {
         })     
     }
 
-    pub fn iter<'b>(&'b self) -> Iter<'b> {
+    pub fn iter(&self) -> Iter {
         Iter {
             rows: self.rows.iter()
         }

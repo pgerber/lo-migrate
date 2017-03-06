@@ -3,9 +3,6 @@
 
 extern crate lo_migrate;
 extern crate postgres;
-extern crate two_lock_queue;
-#[macro_use]
-extern crate log;
 extern crate env_logger;
 extern crate aws_sdk_rust;
 extern crate url;
@@ -14,9 +11,7 @@ use postgres::{Connection, TlsMode};
 use lo_migrate::retrieve::LoRetriever;
 use lo_migrate::store::S3Manager;
 use lo_migrate::commit;
-use two_lock_queue as queue;
 use url::Url;
-use aws_sdk_rust::aws::common::credentials::DefaultCredentialsProvider;
 use aws_sdk_rust::aws::s3::endpoint::Endpoint;
 use aws_sdk_rust::aws::s3::endpoint::Signature;
 use aws_sdk_rust::aws::common::region::Region;
