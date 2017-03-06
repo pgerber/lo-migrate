@@ -70,10 +70,11 @@ impl Lo {
     fn store_read_data<P>(&self, data: &[u8], manager: &S3Manager<P>) -> Result<()>
         where P: AwsCredentialsProvider
     {
-        PutObjectRequest {
+        let request = PutObjectRequest {
             key: self.sha2_base64().unwrap(),  // FIXME: hash could be missing
             bucket: manager.bucket(),
             body: Some(data),
+            content_type: Some(self.mime_type().to_string()),
             // TODO: do we need to set the content type?
             ..Default::default()
         };

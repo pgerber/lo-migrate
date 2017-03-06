@@ -66,17 +66,21 @@ pub struct Lo {
 
     /// Size of Large Object according to Nice2 database (column _nice_binary.size)
     size: i64,
+
+    /// Mime type from _nice_binary.mime_type)
+    mime_type: String
 }
 
 impl Lo {
     /// create new [`Lo`].
-    pub fn new(sha1: Vec<u8>, oid: Oid, size: i64) -> Lo {
+    pub fn new(sha1: Vec<u8>, oid: Oid, size: i64, mime_type: String) -> Lo {
         Lo {
             sha1: sha1,
             oid:  oid,
             sha2: None,
             data: Data::None,
             size: size,
+            mime_type: mime_type
         }
     }
 
@@ -119,6 +123,11 @@ impl Lo {
     /// Get reference to [`Data`]
     pub fn lo_data(&self) -> &Data {
         &self.data
+    }
+
+    // Get mime type as stored in _nice_binary.mime_type
+    pub fn mime_type(&self) -> &str {
+        &self.mime_type
     }
 
     /// Retrieve Large Object data

@@ -13,7 +13,7 @@ pub struct LoRetriever<'a> {
 impl<'a> LoRetriever<'a> {
     pub fn new(conn: &'a Connection, max_results: i64) -> Result<Self> {
         assert!(max_results > 0);
-        let rows = conn.query("SELECT hash, data, size FROM _nice_binary where sha2 is NULL LIMIT $1", &[&max_results])?;
+        let rows = conn.query("SELECT hash, data, size, mime_type FROM _nice_binary where sha2 is NULL LIMIT $1", &[&max_results])?;
 
         Ok(LoRetriever {
             rows: rows
@@ -46,8 +46,9 @@ impl<'a> Iter<'a> {
         let sha1 = sha1.from_hex().unwrap(); // FIXME: filter invalid hashes? Or return a `Result`
         let oid: Oid = row.get(1);
         let size: i64 = row.get(2);
+        let mime_type: String = row.get(3);
 
-        Lo::new(sha1, oid, size)
+        Lo::new(sha1, oid, size, mime_type)
     }
 }
 
