@@ -20,6 +20,7 @@ base64 = "*"
 log = "*"
 env_logger = "*"
 url = "*"
+lazy_static = "*"
 
 [features]
 default = []

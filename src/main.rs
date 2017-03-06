@@ -13,6 +13,7 @@ extern crate url;
 use postgres::{Connection, TlsMode};
 use lo_migrate::retrieve::LoRetriever;
 use lo_migrate::store::S3Manager;
+use lo_migrate::commit;
 use two_lock_queue as queue;
 use url::Url;
 use aws_sdk_rust::aws::common::credentials::DefaultCredentialsProvider;
@@ -32,7 +33,8 @@ fn main() {
     let retriever = LoRetriever::new(&conn, 1024).unwrap();
 
   //  println!("{}", retriever.into_iter().count());
-    for mut lo in retriever.into_iter() {
+    let mut objects: Vec<_> = retriever.into_iter().collect();
+    for mut lo in &mut objects {
         println!();
         println!("{:?}", lo);
         lo.retrieve_lo_data(&conn, (1024_i64).pow(2)).unwrap();
@@ -51,4 +53,6 @@ fn main() {
         let manager = S3Manager::new(provider, endpoint, "test".to_string());
         lo.store(&manager).unwrap();
     }
+
+    commit::commit(&objects, &conn).unwrap();
 }

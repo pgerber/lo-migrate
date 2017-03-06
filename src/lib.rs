@@ -28,11 +28,14 @@ extern crate hyper;
 extern crate base64;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate lazy_static;
 
 pub mod common;
 pub mod lo;
 pub mod retrieve;
 pub mod store;
+pub mod commit;
 
 pub use common::Result;
 pub use aws_sdk_rust::aws::s3;
