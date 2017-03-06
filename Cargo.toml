@@ -19,6 +19,7 @@ hyper = "*"
 base64 = "*"
 log = "*"
 env_logger = "*"
+url = "*"
 
 [features]
 default = []

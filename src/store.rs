@@ -14,7 +14,7 @@ pub struct S3Manager<P> where P: AwsCredentialsProvider {
 }
 
 impl<P> S3Manager<P> where P: AwsCredentialsProvider {
-    fn new(credentials_provider: P, endpoint: Endpoint, bucket: String) -> Self
+    pub fn new(credentials_provider: P, endpoint: Endpoint, bucket: String) -> Self
         where P: AwsCredentialsProvider
     {
         S3Manager {
@@ -23,11 +23,11 @@ impl<P> S3Manager<P> where P: AwsCredentialsProvider {
         }
     }
 
-    fn client(&self) -> &S3Client<P, hyper::client::Client> {
+    pub fn client(&self) -> &S3Client<P, hyper::client::Client> {
         &self.client
     }
 
-    fn bucket(&self) -> BucketName {
+    pub fn bucket(&self) -> BucketName {
         // TODO: For some reason the `s3` library wants a `String` and not a `&str`
         //       forcing us to copy the `String`. Should this be changed in the library?
         self.bucket.clone()
@@ -70,7 +70,7 @@ impl Lo {
     fn store_read_data<P>(&self, data: &[u8], manager: &S3Manager<P>) -> Result<()>
         where P: AwsCredentialsProvider
     {
-        let request = PutObjectRequest {
+        PutObjectRequest {
             key: self.sha2_base64().unwrap(),  // FIXME: hash could be missing
             bucket: manager.bucket(),
             body: Some(data),
