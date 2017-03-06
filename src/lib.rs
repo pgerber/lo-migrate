@@ -1,7 +1,8 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 
-// #![feature(try_from)]
+#![feature(try_from)]
+#![feature(integer_atomics)]
 
 // #![warn(missing_docs)]
 #![deny(unused_must_use)]
@@ -51,12 +52,16 @@ extern crate hyper;
 extern crate base64;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate lazy_static;
+extern crate two_lock_queue;
 
 pub mod common;
 pub mod lo;
 pub mod retrieve;
 pub mod store;
 pub mod commit;
+pub mod thread;
 
 pub use common::Result;
 pub use aws_sdk_rust::aws::s3;
