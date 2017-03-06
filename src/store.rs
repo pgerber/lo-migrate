@@ -35,6 +35,12 @@ impl<P> S3Manager<P> where P: AwsCredentialsProvider {
 }
 
 impl Lo {
+    /// Store Large Object on S3
+    ///
+    /// Store Large Object data on S3 using the sha2 hash as key, as returned by `[Lo::sha2_base64]`.
+    /// The data in memory or the temporary file held by [`Data`] is dropped.
+    ///
+    /// TODO: Ignore already existing keys
     pub fn store<P>(&mut self, manager: &S3Manager<P>) -> Result<()>
         where P: AwsCredentialsProvider
     {
@@ -68,6 +74,7 @@ impl Lo {
             key: self.sha2_base64().unwrap(),  // FIXME: hash could be missing
             bucket: manager.bucket(),
             body: Some(data),
+            // TODO: do we need to set the content type?
             ..Default::default()
         };
         manager.client().put_object(&request, None)?;
