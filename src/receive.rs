@@ -1,0 +1,123 @@
+use common::Result;
+use lo::{Data, Lo};
+use mktemp::Temp;
+use postgres::Connection;
+use postgres_large_object::{LargeObjectTransactionExt, Mode};
+use sha2::{Digest, Sha256};
+use std::fs;
+use std::io;
+use std::io::Read;
+
+impl Lo {
+    /// Retrieve Large Object data
+    ///
+    /// Retrieve Large Object from Postgres and store in memory if its size is less or equal
+    /// `size_threshold` or write it to a temporary file if larger.
+    ///
+    /// If Large Object has already been retrieved `size_threshold` is ignored and a reference
+    /// to the already existing [`Data`] is returned.
+    pub fn retrieve_lo_data(&mut self, conn: &Connection, size_threshold: i64) -> Result<&Data> {
+        if self.lo_data().is_none() {
+            let data = self.retrieve_lo_data_internal(conn, size_threshold)?;
+            self.set_lo_data(data);
+        };
+        Ok(self.lo_data())
+    }
+
+    fn retrieve_lo_data_internal(&mut self,
+                                 conn: &Connection,
+                                 size_threshold: i64)
+                                 -> Result<Data> {
+        let trans = conn.transaction()?;
+        let mut large_object = trans.open_large_object(self.oid(), Mode::Read)?;
+        let mut sha2_reader: DigestReader<Sha256> = DigestReader::new(&mut large_object);
+
+        let data = if self.size() <= size_threshold {
+            // read to memory
+            #[cfg(feature = "try_from")]
+            let size = self.size().try_into().unwrap();
+
+            #[cfg(not(feature = "try_from"))]
+            #[allow(cast_possible_truncation)]
+            #[allow(cast_sign_loss)]
+            let size = self.size() as usize;
+
+            let mut data = Vec::with_capacity(size);
+            io::copy(&mut sha2_reader, &mut data)?;
+            Data::Vector(data)
+        } else {
+            // write to temporary file
+            let temp_file = Temp::new_file()?;
+            let mut file = fs::File::create(&temp_file)?;
+            io::copy(&mut sha2_reader, &mut file)?;
+            Data::File(temp_file)
+        };
+
+        self.set_sha2(sha2_reader.hash());
+        Ok(data)
+    }
+}
+
+/// Reader that wraps another reader and calculates the hash of the data passed through it.
+struct DigestReader<'a, D>
+    where D: Digest
+{
+    hasher: D,
+    inner: &'a mut Read,
+}
+
+impl<'a, D> DigestReader<'a, D>
+    where D: Digest + Default
+{
+    fn new<T>(inner: &'a mut T) -> Self
+        where T: Read
+    {
+        DigestReader {
+            hasher: Default::default(),
+            inner: inner,
+        }
+    }
+
+    /// Returns the hash of all data passed through the reader
+    ///
+    /// This operation consumes the reader.
+    fn hash(self) -> Vec<u8> {
+        // FIXME: is there a better way than copying the result?
+        self.hasher.result().into_iter().collect()
+    }
+}
+
+impl<'a, D> Read for DigestReader<'a, D>
+    where D: Digest
+{
+    fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
+        let size = self.inner.read(&mut buf)?;
+        self.hasher.input(&buf[..size]);
+        Ok(size)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sha2::{Digest, Sha256};
+
+    #[test]
+    fn sha2_reader_partially_stale_buffer() {
+        let data = b"123456789";
+        let mut inner_reader = &data[..];
+        let mut sha2_reader: DigestReader<Sha256> = DigestReader::new(&mut inner_reader);
+        let mut buf = [0; 5];
+        assert_eq!(sha2_reader.read(&mut buf).unwrap(), 5);
+        assert_eq!(&buf, b"12345");
+        assert_eq!(sha2_reader.read(&mut buf).unwrap(), 4);
+        assert_eq!(&buf[..4], b"6789");
+        assert_hash_correct(&sha2_reader.hash(), data);
+    }
+
+    fn assert_hash_correct(hash: &[u8], data: &[u8]) {
+        let mut hasher = Sha256::new();
+        hasher.input(data);
+        assert_eq!(hash[..], hasher.result()[..]);
+    }
+}

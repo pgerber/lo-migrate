@@ -5,8 +5,10 @@ authors = ["Peter Gerber <peter@arbitrary.ch>"]
 
 [dependencies]
 digest = "*"
+fallible-iterator = "*"
 sha1 = { version = "*", git = "https://github.com/RustCrypto/hashes" }
 sha2 = "*"
+spin = "*"
 postgres = "0.13"
 postgres_large_object = "0.5.1"
 aws-sdk-rust = "*"
@@ -27,7 +29,6 @@ url = "*"
 
 [features]
 default = []
-dev = ["clippy"]
 
 [[bin]]
 name = "lo_migrate_cli"
