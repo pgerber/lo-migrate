@@ -1,4 +1,4 @@
-use common::Result;
+use error::Result;
 use lo::Lo;
 use postgres::Connection;
 use std::sync::atomic::Ordering;

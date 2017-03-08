@@ -1,3 +1,5 @@
+//! Object that are copied from Postgres to S3
+
 use postgres::types::Oid;
 use std::fmt;
 use std::mem;

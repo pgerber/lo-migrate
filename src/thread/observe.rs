@@ -13,7 +13,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use two_lock_queue::Sender;
 
-use common::Result;
+use error::Result;
 use super::*;
 
 pub struct Observer<'a> {

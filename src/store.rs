@@ -1,4 +1,6 @@
-use common::Result;
+//! Storing of objects in S3
+
+use error::Result;
 use lo::{Data, Lo};
 use s3::s3client::S3Client;
 use s3::object::PutObjectRequest;

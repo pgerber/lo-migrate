@@ -1,3 +1,5 @@
+//! Custom error type
+
 use postgres;
 use aws::errors::s3;
 use std::io;

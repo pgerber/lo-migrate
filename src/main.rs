@@ -21,7 +21,7 @@ use lo_migrate::thread::{Committer, Monitor, Observer, Receiver, Storer, ThreadS
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use lo_migrate::common::Result;
+use lo_migrate::error::Result;
 
 fn connect_to_postgres(url: &str, count: usize) -> Vec<Connection> {
     let mut conns = Vec::with_capacity(count);

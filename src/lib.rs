@@ -1,3 +1,12 @@
+//! Postgres to S3 migration tool for the Tocco Business Framework
+//!
+//! # Frankly, this library is design to do this using multiple threads
+//!
+//! * Fetch large object from Postgres
+//! * Store binaries in S3
+//! * Calculate sha2 hashes
+//! * commit sha2 hashes to Postgres
+
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 
@@ -58,13 +67,12 @@ extern crate base64;
 extern crate log;
 extern crate two_lock_queue;
 
-pub mod commit;
-pub mod common;
-pub mod lo;
-pub mod store;
-pub mod receive;
+mod commit;
+pub mod error;
+mod lo;
+mod store;
+mod receive;
 pub mod thread;
 
-pub use common::Result;
-pub use aws_sdk_rust::aws::s3;
-pub use aws_sdk_rust::aws;
+use aws_sdk_rust::aws::s3;
+use aws_sdk_rust::aws;

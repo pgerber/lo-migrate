@@ -5,7 +5,7 @@
 //! it pushes the [`Lo`] via queue to the storer thread.
 
 use postgres::Connection;
-use common::Result;
+use error::Result;
 use two_lock_queue;
 use std::sync::Arc;
 use super::*;

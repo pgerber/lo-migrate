@@ -1,6 +1,6 @@
 use lo::Lo;
 use postgres::Connection;
-use common::Result;
+use error::Result;
 
 /// Commit the sha2 hashes of the given [`Lo`]s to database.
 pub fn commit(conn: &Connection, objects: &[Lo]) -> Result<()> {

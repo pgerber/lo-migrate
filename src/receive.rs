@@ -1,4 +1,6 @@
-use common::Result;
+//! Fetching Largo Objects from Postgres
+
+use error::Result;
 use lo::{Data, Lo};
 use mktemp::Temp;
 use postgres::Connection;

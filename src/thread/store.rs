@@ -1,4 +1,4 @@
-use common::Result;
+use error::Result;
 use hyper::client::Client;
 use s3::s3client::S3Client;
 use aws::common::credentials::AwsCredentialsProvider;
