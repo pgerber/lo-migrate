@@ -4,7 +4,7 @@ use error::Result;
 
 /// Commit the sha2 hashes of the given [`Lo`]s to database.
 pub fn commit(conn: &Connection, objects: &[Lo]) -> Result<()> {
-    let stmt = conn.prepare("UPDATE _nice_binary SET sha2 = $1 WHERE hash = $2")?;
+    let stmt = conn.prepare_cached("UPDATE _nice_binary SET sha2 = $1 WHERE hash = $2")?;
     let tx = conn.transaction()?;
 
     for lo in objects {
