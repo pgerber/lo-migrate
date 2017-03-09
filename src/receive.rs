@@ -5,7 +5,7 @@ use lo::{Data, Lo};
 use mktemp::Temp;
 use postgres::Connection;
 use postgres_large_object::{LargeObjectTransactionExt, Mode};
-use sha2::{Digest, Sha256};
+use digest::Digest;
 use std::fs;
 use std::io;
 use std::io::Read;
@@ -18,21 +18,25 @@ impl Lo {
     ///
     /// If Large Object has already been retrieved `size_threshold` is ignored and a reference
     /// to the already existing [`Data`] is returned.
-    pub fn retrieve_lo_data(&mut self, conn: &Connection, size_threshold: i64) -> Result<&Data> {
+    pub fn retrieve_lo_data<D>(&mut self, conn: &Connection, size_threshold: i64) -> Result<&Data>
+        where D: Digest + Default
+    {
         if self.lo_data().is_none() {
-            let data = self.retrieve_lo_data_internal(conn, size_threshold)?;
+            let data = self.retrieve_lo_data_internal::<D>(conn, size_threshold)?;
             self.set_lo_data(data);
         };
         Ok(self.lo_data())
     }
 
-    fn retrieve_lo_data_internal(&mut self,
-                                 conn: &Connection,
-                                 size_threshold: i64)
-                                 -> Result<Data> {
+    fn retrieve_lo_data_internal<D>(&mut self,
+                                    conn: &Connection,
+                                    size_threshold: i64)
+                                    -> Result<Data>
+        where D: Digest + Default
+    {
         let trans = conn.transaction()?;
         let mut large_object = trans.open_large_object(self.oid(), Mode::Read)?;
-        let mut sha2_reader: DigestReader<Sha256> = DigestReader::new(&mut large_object);
+        let mut sha2_reader: DigestReader<D> = DigestReader::new(&mut large_object);
 
         let data = if self.size() <= size_threshold {
             // read to memory

@@ -5,6 +5,7 @@
 //! it pushes the [`Lo`] via queue to the storer thread.
 
 use postgres::Connection;
+use digest::Digest;
 use error::Result;
 use two_lock_queue;
 use std::sync::Arc;
@@ -23,16 +24,18 @@ impl<'a> Receiver<'a> {
         }
     }
 
-    pub fn start_worker(&self,
-                        rx: Arc<two_lock_queue::Receiver<Lo>>,
-                        tx: Arc<two_lock_queue::Sender<Lo>>,
-                        size_threshold: i64)
-                        -> Result<()> {
+    pub fn start_worker<D>(&self,
+                           rx: Arc<two_lock_queue::Receiver<Lo>>,
+                           tx: Arc<two_lock_queue::Sender<Lo>>,
+                           size_threshold: i64)
+                           -> Result<()>
+        where D: Digest + Default
+    {
         while let Ok(mut lo) = rx.recv() {
             debug!("processing large object: {:?}", lo);
 
             // receive from observer thread
-            lo.retrieve_lo_data(self.conn, size_threshold)?;
+            lo.retrieve_lo_data::<D>(self.conn, size_threshold)?;
 
             // global counter of received objects
             self.stats.lo_received.fetch_add(1, Ordering::Relaxed);

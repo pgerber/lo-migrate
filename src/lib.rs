@@ -52,6 +52,7 @@
 #![cfg_attr(feature = "clippy", deny(wrong_self_convention))]
 
 extern crate aws_sdk_rust;
+extern crate digest;
 extern crate fallible_iterator;
 extern crate mktemp;
 extern crate postgres;

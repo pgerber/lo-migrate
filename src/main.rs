@@ -3,6 +3,7 @@
 
 extern crate lo_migrate;
 extern crate postgres;
+extern crate sha2;
 extern crate env_logger;
 extern crate aws_sdk_rust;
 extern crate url;
@@ -18,6 +19,7 @@ use aws_sdk_rust::aws::common::region::Region;
 use aws_sdk_rust::aws::common::credentials::ParametersProvider;
 use hyper::client::Client;
 use lo_migrate::thread::{Committer, Monitor, Observer, Receiver, Storer, ThreadStat};
+use sha2::Sha256;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -62,6 +64,8 @@ fn print_thread_result(result: &Result<()>, thread_stat: &ThreadStat) {
 fn main() {
     env_logger::init().unwrap();
 
+    type TargetDigest = Sha256;
+
     let pg_db_name = "nice2_ecap";
     let pg_password = "";
     let pg_url = format!("postgresql://postgres:{}@localhost/{}",
@@ -88,9 +92,12 @@ fn main() {
     let storer_thread_count = 50;
     let committer_thread_count = 2;
 
-    let observer_pg_conns = connect_to_postgres(&pg_url, 1 /* multiple threads not supperted */);
+    let observer_pg_conns = connect_to_postgres(&pg_url,
+                                                1 /* multiple threads not supperted */);
     let receiver_pg_conns = connect_to_postgres(&pg_url, receiver_thread_count);
-    let storer_s3_conns = connect_to_s3(s3_access_key, s3_secret_key, &s3_endpoint,
+    let storer_s3_conns = connect_to_s3(s3_access_key,
+                                        s3_secret_key,
+                                        &s3_endpoint,
                                         storer_thread_count);
     let committer_pg_conns = connect_to_postgres(&pg_url, committer_thread_count);
 
@@ -136,7 +143,7 @@ fn main() {
                 // Buffer object larger than 1 MiB in a temporary file rather than in memory.
                 let threshold = 1024_i64.pow(3);
 
-                let result = receiver.start_worker(rx, tx, threshold);
+                let result = receiver.start_worker::<TargetDigest>(rx, tx, threshold);
                 print_thread_result(&result, &thread_stat);
             }));
         }
