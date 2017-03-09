@@ -24,10 +24,11 @@ impl<'a> Storer<'a> {
                            -> Result<()>
         where P: AwsCredentialsProvider
     {
+        // receive from receiver thread
         while let Ok(mut lo) = rx.recv() {
             debug!("processing large object: {:?}", lo);
 
-            // receive from storer thread
+            // store data on S3
             lo.store(client, bucket)?;
 
             // global counter of stored objects

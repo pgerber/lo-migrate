@@ -1,3 +1,8 @@
+//! committer thred implementation
+//!
+//! The committer threads receives `Lo`s from the storer thread and commits the sha2 hashes
+//! to the database.
+
 use error::Result;
 use lo::Lo;
 use postgres::Connection;
@@ -33,7 +38,7 @@ impl<'a> Committer<'a> {
             self.stats.lo_committed.fetch_add(lo_chunk.len() as u64, Ordering::Relaxed);
 
             if lo_chunk.len() < chunk_size {
-                break;
+                break; // sender hung up queue
             }
 
             // clear committed `Lo`s

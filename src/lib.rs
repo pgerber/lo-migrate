@@ -13,7 +13,6 @@
 #![feature(try_from)]
 #![feature(integer_atomics)]
 
-// #![warn(missing_docs)]
 #![deny(unused_must_use)]
 #![deny(const_err)]
 #![deny(legacy_directory_ownership)]
@@ -27,6 +26,7 @@
 #![deny(while_true)]
 
 // clippy lints
+#![cfg_attr(feature = "clippy", allow(new_without_default_derive))]
 #![cfg_attr(feature = "clippy", warn(cast_possible_truncation))]
 #![cfg_attr(feature = "clippy", warn(cast_possible_wrap))]
 #![cfg_attr(feature = "clippy", warn(cast_precision_loss))]

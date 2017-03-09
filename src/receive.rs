@@ -38,8 +38,8 @@ impl Lo {
         let mut large_object = trans.open_large_object(self.oid(), Mode::Read)?;
         let mut sha2_reader: DigestReader<D> = DigestReader::new(&mut large_object);
 
-        let data = if self.size() <= size_threshold {
-            // read to memory
+        let (data, size) = if self.size() <= size_threshold {
+            // keep binary data in memory
             #[cfg(feature = "try_from")]
             let size = self.size().try_into().unwrap();
 
@@ -49,14 +49,24 @@ impl Lo {
             let size = self.size() as usize;
 
             let mut data = Vec::with_capacity(size);
-            io::copy(&mut sha2_reader, &mut data)?;
-            Data::Vector(data)
+            let size = io::copy(&mut sha2_reader, &mut data)?;
+            (Data::Vector(data), size)
         } else {
-            // write to temporary file
+            // keep binary data in temporary file
             let temp_file = Temp::new_file()?;
             let mut file = fs::File::create(&temp_file)?;
-            io::copy(&mut sha2_reader, &mut file)?;
-            Data::File(temp_file)
+            let size = io::copy(&mut sha2_reader, &mut file)?;
+            (Data::File(temp_file), size)
+        };
+
+        #[cfg_attr(feature = "clippy", allow(cast_possible_wrap))]
+        #[cfg_attr(feature = "clippy", allow(cast_sign_loss))]
+        let expected_size = self.size() as u64;
+        if expected_size as u64 != size {
+            warn!("size of binary read ({} bytes) differs from size according to \
+                   _nice_binary.size ({} bytes).",
+                  size,
+                  self.size());
         };
 
         self.set_sha2(sha2_reader.hash());
@@ -88,7 +98,6 @@ impl<'a, D> DigestReader<'a, D>
     ///
     /// This operation consumes the reader.
     fn hash(self) -> Vec<u8> {
-        // FIXME: is there a better way than copying the result?
         self.hasher.result().into_iter().collect()
     }
 }

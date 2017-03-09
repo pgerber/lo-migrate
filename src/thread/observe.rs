@@ -53,12 +53,12 @@ impl<'a> Observer<'a> {
         Ok(())
     }
 
-    /// count large object in database that still need to be move to S3
+    /// count large object in database that still need to be moved to S3
     ///
     /// note: we pass in the transaction to be sure that the count is correct; Count must occur in
-    ///       same transaction as retrieving the rows.
+    ///       same transaction as retrieving the rows to be correct.
     fn count_objects(&self, _tx: &Transaction) -> Result<u64> {
-        debug!("counting large objects");
+        info!("counting large objects");
         let rows = self.conn.query("SELECT count(*) FROM _nice_binary where sha2 is NULL", &[])?;
         let count: i64 = rows.get(0).get(0);
         Ok(u64::try_from(count).expect("count should not be negative"))
@@ -66,15 +66,20 @@ impl<'a> Observer<'a> {
 
     /// add [`Lo`] to receiver queue
     fn queue(&self, tx: &Sender<Lo>, row: Row) -> Result<()> {
-        let sha1: String = row.get(0);
-        let sha1 = sha1.from_hex().unwrap(); // FIXME: filter invalid hashes? Or return a `Result`
+        let sha1_hex: String = row.get(0);
+        let sha1 = sha1_hex.from_hex();
         let oid: Oid = row.get(1);
         let size: i64 = row.get(2);
         let mime_type: String = row.get(3);
 
-        let lo = Lo::new(sha1, oid, size, mime_type);
-        debug!("observer: adding Lo to queue: {:?}", lo);
-        tx.send(lo)?;
+        if let Ok(sha1) = sha1 {
+            let lo = Lo::new(sha1, oid, size, mime_type);
+            debug!("adding Lo to queue: {:?}", lo);
+            tx.send(lo)?;
+        } else {
+            warn!("encountered _nice_binary entry with invalid hash {:?}",
+                  sha1_hex)
+        }
         Ok(())
     }
 }

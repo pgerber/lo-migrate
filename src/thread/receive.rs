@@ -1,8 +1,8 @@
 //! receive thread implementation
 //!
-//! The receiver thread receives [`Lo`]s from the observer thread via queue. Then it retrieves the
-//! Large Object and store them in memory or as temporary file, depending on size. Once this is done
-//! it pushes the [`Lo`] via queue to the storer thread.
+//! The receiver thread receives [`Lo`]s from the observer thread. Then it retrieves the Large
+//! Object and stores them in memory or as temporary file, depending on size. Once this is done
+//! it pushes the [`Lo`]s storer thread.
 
 use postgres::Connection;
 use digest::Digest;
@@ -31,10 +31,11 @@ impl<'a> Receiver<'a> {
                            -> Result<()>
         where D: Digest + Default
     {
+        // receive from observer thread
         while let Ok(mut lo) = rx.recv() {
             debug!("processing large object: {:?}", lo);
 
-            // receive from observer thread
+            // retrieve Largo Object from Postgres
             lo.retrieve_lo_data::<D>(self.conn, size_threshold)?;
 
             // global counter of received objects

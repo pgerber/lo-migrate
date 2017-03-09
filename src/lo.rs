@@ -1,4 +1,4 @@
-//! Object that are copied from Postgres to S3
+//! Definition and generic implementation of `Lo`
 
 use postgres::types::Oid;
 use std::fmt;
@@ -9,8 +9,7 @@ use serialize::hex::ToHex;
 use mktemp::Temp;
 use base64;
 
-/// Large Object Stored in memory on in a temporary file
-// TODO: look at memory footprint
+/// Large Object Stored in memory or in a temporary file
 pub enum Data {
     /// Large Object stored in memory
     Vector(Vec<u8>),
@@ -18,7 +17,7 @@ pub enum Data {
     /// Large Object stored in a temporary file
     File(Temp),
 
-    /// Largo Object not (yet) available
+    /// Largo Object not yet or no longer available
     ///
     /// See [`Lo::retrieve_lo_data`] for show to retrieve it.
     None,
@@ -50,7 +49,7 @@ pub struct Lo {
 
     /// sha2 hash
     ///
-    /// Only available if Large Object has been retrieved. Set by [`Lo::retrieve_lo_data`].
+    /// Only available if Large Object has been retrieved. Set by `Lo::retrieve_lo_data`.
     sha2: Option<Vec<u8>>,
 
     /// Large Object binary data
@@ -122,20 +121,22 @@ impl Lo {
         &self.data
     }
 
-    // Set [`Data`]
+    /// Set [`Data`]
     pub fn set_lo_data(&mut self, data: Data) {
         self.data = data;
     }
 
-    // Get mime type as stored in _nice_binary.mime_type
+    /// Get mime type as stored in _nice_binary.mime_type
     pub fn mime_type(&self) -> &str {
         &self.mime_type
     }
 
+    /// Postgres Large Object ID
     pub fn oid(&self) -> Oid {
         self.oid
     }
 
+    /// Size of object according to _nice_binary.size
     pub fn size(&self) -> i64 {
         self.size
     }
@@ -161,6 +162,7 @@ impl fmt::Debug for Lo {
             .field("size", &size)
             .field("sha1", &sha1)
             .field("oid", &self.oid)
+            .field("mime", &self.mime_type)
             .field("sha2", &sha2)
             .field("data", &self.data)
             .finish()

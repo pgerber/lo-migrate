@@ -1,4 +1,6 @@
-//! Thread that shows stats to the user
+//! Implementation of the Monitor thread
+//!
+//! The monitor thread show stats to the user
 
 #![cfg_attr(feature = "clippy", allow(float_arithmetic))]
 #![cfg_attr(feature = "clippy", allow(cast_precision_loss))]
@@ -136,7 +138,7 @@ impl<'a> Monitor<'a> {
                                        self.commit_queue_size));
             println!();
 
-            // current status are the `before` stats in the next loop
+            // `now` is the `before` status in the next loop
             before = now;
 
             // thread cancellation point
@@ -187,7 +189,8 @@ impl<'a> Monitor<'a> {
 
     /// wait for `interval` but check every `cancel_interval` if thread should be cancelled
     ///
-    /// returns Err(_) if thread should be cancelled and Ok(_) otherwise.
+    /// returns Err(_) immediatly if thread should be cancelled and Ok(_) after `interval`
+    /// otherwise.
     fn wait_for_at_most(&self, duration: Duration, cancel_interval: Duration) -> Result<(), ()> {
         let instant = Instant::now();
         while instant.elapsed() < duration {

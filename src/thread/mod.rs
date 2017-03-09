@@ -31,19 +31,18 @@ pub struct ThreadStat {
 
     /// Total number of large object
     ///
-    /// Number of entries in _nice_binary if already known.
+    /// Number of entries in _nice_binary that need to be migrated if already known.
     lo_total: Arc<spin::Mutex<Option<u64>>>,
 
     /// Number of Large Object observed
     ///
-    /// This is the number of binary entries extracted from Postgres. This
-    /// does not imply that the object has been read yet.
+    /// This is the number of binary entries extracted from Postgres. This does not imply that the
+    /// object has been read yet.
     lo_observed: Arc<AtomicU64>,
 
     /// Number of Large Objects read
     ///
-    /// This is the number of Large Object received
-    /// from Postgres and buffered locally
+    /// This is the number of Large Object received from Postgres
     lo_received: Arc<AtomicU64>,
 
     /// Number of Large Object written to S3

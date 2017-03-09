@@ -1,4 +1,4 @@
-//! Custom error type
+//! Error handling
 
 use postgres;
 use aws::errors::s3;
@@ -7,8 +7,10 @@ use std::result;
 use std::sync::mpsc::SendError;
 use lo::Lo;
 
+/// `Result` expecting `MigrationError` as `Err`.
 pub type Result<T> = result::Result<T, MigrationError>;
 
+/// Custom error type to be used by all public functions and method
 #[derive(Debug)]
 pub enum MigrationError {
     IoError(io::Error),
@@ -20,6 +22,7 @@ pub enum MigrationError {
 }
 
 impl MigrationError {
+    /// true if error was caused by a thread cancelling
     pub fn is_cancelled(&self) -> bool {
         if let MigrationError::ThreadCancelled = *self {
             true
@@ -28,6 +31,7 @@ impl MigrationError {
         }
     }
 
+    /// true if the error was caused by a hang up queue
     pub fn is_queue_hangup(&self) -> bool {
         if let MigrationError::SendError(_) = *self {
             true

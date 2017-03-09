@@ -11,10 +11,8 @@ use hyper::client::Client;
 impl Lo {
     /// Store Large Object on S3
     ///
-    /// Store Large Object data on S3 using the sha2 hash as key, as returned by
-    /// `[Lo::sha2_base64]`.The data in memory or the temporary file held by [`Data`] is dropped.
-    ///
-    /// TODO: Ignore already existing keys
+    /// Store Large Object data on S3 using the sha2 hash as key. The data in memory or the
+    /// temporary file held by [`Data`] is dropped.
     pub fn store<P>(&mut self, client: &S3Client<P, Client>, bucket: &str) -> Result<()>
         where P: AwsCredentialsProvider
     {
@@ -29,13 +27,13 @@ impl Lo {
                 let data = unsafe {
                     // This is considered unsafe because the mapped file may be altered
                     // concurrently, violating Rust's safety guarantees. However, this shouldn't
-                    // happen on a temporary file without manual intervention.
+                    // happen unintentionally with a temporary file.
                     mapped_file.as_slice()
                 };
                 self.store_read_data(data, client, bucket)
             }
             Data::Vector(ref data) => self.store_read_data(data, client, bucket),
-            Data::None => panic!(),  // FIXME: shouldn't be possible but should be handled anyway
+            Data::None => panic!("Large Object must have been fetched from Postgres")
         }
     }
 
@@ -47,11 +45,10 @@ impl Lo {
         where P: AwsCredentialsProvider
     {
         let request = PutObjectRequest {
-            key: self.sha2_base64().unwrap(), // FIXME: hash could be missing
+            key: self.sha2_base64().expect("Largo Object must have been fetched from Postgres"),
             bucket: bucket.to_string(),
             body: Some(data),
             content_type: Some(self.mime_type().to_string()),
-            // TODO: do we need to set the content type?
             ..Default::default()
         };
         client.put_object(&request, None)?;
