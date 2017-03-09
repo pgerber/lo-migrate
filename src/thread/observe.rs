@@ -31,10 +31,10 @@ impl<'a> Observer<'a> {
 
     pub fn start_worker(&self, tx: Arc<Sender<Lo>>, buffer_size: i32) -> Result<()> {
         let trx = self.conn.transaction()?;
-        {
-            let mut count = self.stats.lo_total.lock();
-            *count = Some(self.count_objects(&trx)?);
-        }
+
+        // count Large Objects
+        let count = Some(self.count_objects(&trx)?);
+        *self.stats.lo_total.lock() = count;
 
         let stmt = self.conn
             .prepare("SELECT hash, data, size, mime_type FROM _nice_binary where sha2 is NULL")?;
