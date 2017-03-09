@@ -58,6 +58,26 @@ status of the queue and the total amount of object migrated. To enable global st
 [`thread`][thread]`::`[`ThreadStat`][thread] are shared amongst all threads. It is the threads' responsibility to
 increase their respective counters.
 
+Message printed by the monitor thread look like this:
+```
+*******************************************************************
+    Status at 2017-03-09 14:00:20 (updated every: 10s)
+
+Progress Overview:
+    0.08%, 19600 of 23768978 object have been migrated
+
+Processed Objects by Thread Groups:
+    observer thread  - processed:   29395, speed: 177.3 Lo/s
+    receiver thread  - processed:   21195, speed: 177.2 Lo/s
+    storer thread    - processed:   20075, speed: 177.3 Lo/s
+    committer thread - processed:   19600, speed: 149.8 Lo/s
+
+Queue Usage:
+    receive queue    - used   8196 of   8196, 100.00% full, changed by: +0
+    store queue      - used   1024 of   1024, 100.00% full, changed by: +0
+    commit queue     - used    275 of   8196,   3.36% full, changed by: +275
+```
+
 
 [lo]: src/lo.rs
 [committer]: src/thread/commit.rs
