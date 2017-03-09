@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Peter Gerber <peter@arbitrary.ch>"]
 
 [dependencies]
+clap = "*"
 chrono = "*"
 digest = "*"
 fallible-iterator = "*"
