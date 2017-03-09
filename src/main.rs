@@ -78,7 +78,7 @@ impl Args {
                 .short("p")
                 .long("pg-url")
                 .value_name("URL")
-                .help("Url to connect to postgres (USER:PASS@HOST/DB_NAME")
+                .help("Url to connect to postgres (USER:PASS@HOST/DB_NAME)")
                 .required(true))
             .arg(Arg::with_name("receiver_threads")
                 .long("reciver-threads")
@@ -326,7 +326,7 @@ fn main() {
             monitor.start_worker(Duration::from_secs(10));
         }));
 
-        // `Arc<_>` for the queues are dropped here!
+        // `Arc<_>`s for the queues are dropped here!
     }
 
     for thread in threads {

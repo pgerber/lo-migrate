@@ -8,7 +8,49 @@ binaries is updated from SHA1 to SHA2.
 
 # Usage
 
-TO BE WRITTEN
+## Available Command Line Arguments
+
+
+```
+$ ./lo_migrate_cli --help
+Postgres Large Object to S3 Migrator 
+
+USAGE:
+    lo_migrate_cli [OPTIONS] --s3-url <URL> --access-key <KEY> --secret-key <KEY> --bucket <NAME> --pg-url <URL>
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+OPTIONS:
+        --commit-chunk <INT>        Number of SHA2 hashes commited per DB transaction
+        --committer-queue <INT>     Size of the committer queue
+        --comitter-threads <INT>    Number of committer threads
+        --in-mem-max <INT>          Max. size of Large Object to keep in memory (in KiB)
+    -p, --pg-url <URL>              Url to connect to postgres (USER:PASS@HOST/DB_NAME)
+        --reciver-queue <INT>       Size of the receiver queue
+        --reciver-threads <INT>     Number of receiver threads
+    -k, --access-key <KEY>          S3 access key
+    -b, --bucket <NAME>             Name of the S3 bucket
+    -s, --secret-key <KEY>          S3 secret key
+    -u, --s3-url <URL>              URL to S3 endpoint
+        --storer-queue <INT>        Size of the storer queue
+        --storer-threads <INT>      Number of storer threads
+```
+
+## Example
+
+Migrate binaries from database **nice2_ecap** to the **ecap** bucket:
+
+```bash
+lo_migrate_cli --pg-url postgresql://ecap@postgres.tocco.ch/nice2_ecap --access-key my_key --secret-key my_secret --bucket ecap --s3-url "https://s3.tocco.ch"
+```
+
+## Debugging
+
+Logging can be enabled via `RUST_LOG` environment variable, for instance `RUST_LOG=lo_migrate=info` enables all info
+messages. Logging is provided [env_logger](https://crates.io/crates/env_logger) whose
+[documentation](doc.rust-lang.org/log/env_logger) provides more examples.
 
 # Design
 
