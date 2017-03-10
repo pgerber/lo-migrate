@@ -33,7 +33,7 @@ impl Lo {
                 self.store_read_data(data, client, bucket)
             }
             Data::Vector(ref data) => self.store_read_data(data, client, bucket),
-            Data::None => panic!("Large Object must have been fetched from Postgres")
+            Data::None => panic!("Large Object must have been fetched from Postgres"),
         }
     }
 

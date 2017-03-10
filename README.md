@@ -29,8 +29,8 @@ OPTIONS:
         --in-mem-max <INT>          Max. size of Large Object to keep in memory (in KiB)
     -i, --interval <SECS>           Interval in which stats are shown (in secs)
     -p, --pg-url <URL>              Url to connect to postgres (USER:PASS@HOST/DB_NAME)
-        --reciver-queue <INT>       Size of the receiver queue
-        --reciver-threads <INT>     Number of receiver threads
+        --receiver-queue <INT>      Size of the receiver queue
+        --receiver-threads <INT>    Number of receiver threads
     -k, --access-key <KEY>          S3 access key
     -b, --bucket <NAME>             Name of the S3 bucket
     -s, --secret-key <KEY>          S3 secret key

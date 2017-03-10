@@ -1,6 +1,6 @@
 //! Commit sha2 hashes to the database
 //!
-//! used by commiter thread
+//! used by committer thread
 
 use lo::Lo;
 use postgres::Connection;

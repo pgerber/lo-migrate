@@ -1,4 +1,4 @@
-//! committer thred implementation
+//! committer thread implementation
 //!
 //! The committer threads receives `Lo`s from the storer thread and commits the sha2 hashes
 //! to the database.
