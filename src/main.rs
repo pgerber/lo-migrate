@@ -43,7 +43,7 @@ struct Args {
     committer_queue: usize,
     max_in_memory: i64,
     commit_chunk_size: usize,
-    monitor_interval: u64
+    monitor_interval: u64,
 }
 
 impl Args {
@@ -151,9 +151,8 @@ impl Args {
             commit_chunk_size: matches.value_of("commit_chunk_size").map_or(100, |i| {
                 usize::from_str(i).expect("commit check size invalid")
             }),
-            monitor_interval: matches.value_of("monitor_interval").map_or(10, |i| {
-                u64::from_str(i).expect("monitor interval invalid")
-            }),
+            monitor_interval: matches.value_of("monitor_interval")
+                .map_or(10, |i| u64::from_str(i).expect("monitor interval invalid")),
         }
     }
 }
@@ -199,9 +198,7 @@ fn connect_to_s3(access_key: &str,
                  -> Vec<S3Client<ParametersProvider, Client>> {
     let mut conns = Vec::with_capacity(count);
     for _ in 0..count {
-        let credentials = ParametersProvider::with_parameters(access_key,
-                                                              secret_key,
-                                                              Some(access_key.to_string()))
+        let credentials = ParametersProvider::with_parameters(access_key, secret_key, None)
             .expect("Cannot connect to S3");
         conns.push(S3Client::new(credentials, endpoint.clone()))
     }
