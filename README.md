@@ -13,7 +13,7 @@ binaries is updated from SHA1 to SHA2.
 
 ```
 $ ./lo_migrate_cli --help
-Postgres Large Object to S3 Migrator 
+Postgres Large Object to S3 Migrator
 
 USAGE:
     lo_migrate_cli [OPTIONS] --s3-url <URL> --access-key <KEY> --secret-key <KEY> --bucket <NAME> --pg-url <URL>
@@ -27,6 +27,7 @@ OPTIONS:
         --committer-queue <INT>     Size of the committer queue
         --comitter-threads <INT>    Number of committer threads
         --in-mem-max <INT>          Max. size of Large Object to keep in memory (in KiB)
+    -i, --interval <SECS>           Interval in which stats are shown (in secs)
     -p, --pg-url <URL>              Url to connect to postgres (USER:PASS@HOST/DB_NAME)
         --reciver-queue <INT>       Size of the receiver queue
         --reciver-threads <INT>     Number of receiver threads

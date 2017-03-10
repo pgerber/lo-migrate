@@ -43,6 +43,7 @@ struct Args {
     committer_queue: usize,
     max_in_memory: i64,
     commit_chunk_size: usize,
+    monitor_interval: u64
 }
 
 impl Args {
@@ -112,6 +113,11 @@ impl Args {
                 .long("commit-chunk")
                 .value_name("INT")
                 .help("Number of SHA2 hashes commited per DB transaction"))
+            .arg(Arg::with_name("monitor_interval")
+                .short("i")
+                .long("interval")
+                .value_name("SECS")
+                .help("Interval in which stats are shown (in secs)"))
             .get_matches();
 
         Args {
@@ -144,6 +150,9 @@ impl Args {
                            1024,
             commit_chunk_size: matches.value_of("commit_chunk_size").map_or(100, |i| {
                 usize::from_str(i).expect("commit check size invalid")
+            }),
+            monitor_interval: matches.value_of("monitor_interval").map_or(10, |i| {
+                u64::from_str(i).expect("monitor interval invalid")
             }),
         }
     }
@@ -312,6 +321,7 @@ fn main() {
         let rcv_rx_weak = Arc::downgrade(&rcv_rx);
         let str_rx_weak = Arc::downgrade(&str_rx);
         let cmt_rx_weak = Arc::downgrade(&cmt_rx);
+        let monitor_interval = args.monitor_interval;
 
         threads.push(thread::spawn(move || {
             let monitor = Monitor {
@@ -323,7 +333,7 @@ fn main() {
                 commit_queue: cmt_rx_weak,
                 commit_queue_size: args.committer_queue,
             };
-            monitor.start_worker(Duration::from_secs(10));
+            monitor.start_worker(Duration::from_secs(monitor_interval));
         }));
 
         // `Arc<_>`s for the queues are dropped here!
