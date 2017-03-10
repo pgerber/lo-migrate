@@ -4,6 +4,7 @@
 
 #![cfg_attr(feature = "clippy", allow(float_arithmetic))]
 #![cfg_attr(feature = "clippy", allow(cast_precision_loss))]
+#![cfg_attr(feature = "clippy", allow(print_stdout))]
 
 use chrono;
 use lo::Lo;
@@ -19,6 +20,7 @@ use two_lock_queue::Receiver;
 /// used to be able to show the difference since last status update
 struct Stats {
     instant: Instant,
+    difference: Duration,
     duration: Duration,
 
     // processed `Lo`s
@@ -37,6 +39,7 @@ impl Default for Stats {
     fn default() -> Self {
         Stats {
             instant: Instant::now(),
+            difference: Default::default(),
             duration: Default::default(),
             lo_observed: 0,
             lo_received: 0,
@@ -60,9 +63,9 @@ pub struct Monitor<'a> {
 }
 
 impl<'a> Monitor<'a> {
-    #[cfg_attr(feature = "clippy", allow(print_stdout))]
     pub fn start_worker(&self, interval: Duration) {
         let cancel_interval = Duration::from_secs(1);
+        let start_instant = Instant::now();
         let mut before: Stats = Default::default();
         let mut total = None;
 
@@ -74,7 +77,8 @@ impl<'a> Monitor<'a> {
 
             let now = Stats {
                 instant: Instant::now(),
-                duration: before.instant.elapsed(),
+                difference: before.instant.elapsed(),
+                duration: start_instant.elapsed(),
                 lo_observed: self.stats.lo_observed.load(Ordering::Relaxed),
                 lo_received: self.stats.lo_received.load(Ordering::Relaxed),
                 lo_stored: self.stats.lo_stored.load(Ordering::Relaxed),
@@ -98,44 +102,41 @@ impl<'a> Monitor<'a> {
             println!();
 
             println!("Processed Objects by Thread Groups:");
-            println!("{}",
-                     Self::thread_stats("observer thread",
-                                        before.lo_observed,
-                                        now.lo_observed,
-                                        now.duration));
-            println!("{}",
-                     Self::thread_stats("receiver thread",
-                                        before.lo_received,
-                                        now.lo_received,
-                                        now.duration));
-            println!("{}",
-                     Self::thread_stats("storer thread",
-                                        before.lo_stored,
-                                        now.lo_stored,
-                                        now.duration));
-            println!("{}",
-                     Self::thread_stats("committer thread",
-                                        before.lo_committed,
-                                        now.lo_committed,
-                                        now.duration));
+            Self::print_thread_stats("observer thread",
+                                     before.lo_observed,
+                                     now.lo_observed,
+                                     now.difference,
+                                     now.duration);
+            Self::print_thread_stats("receiver thread",
+                                     before.lo_received,
+                                     now.lo_received,
+                                     now.difference,
+                                     now.duration);
+            Self::print_thread_stats("storer thread",
+                                     before.lo_stored,
+                                     now.lo_stored,
+                                     now.difference,
+                                     now.duration);
+            Self::print_thread_stats("committer thread",
+                                     before.lo_committed,
+                                     now.lo_committed,
+                                     now.difference,
+                                     now.duration);
             println!();
 
             println!("Queue Usage:");
-            println!("{}",
-                     Self::queue_stats("receive queue",
-                                       before.lo_received_queue_len,
-                                       now.lo_received_queue_len,
-                                       self.receive_queue_size));
-            println!("{}",
-                     Self::queue_stats("store queue",
-                                       before.lo_stored_queue_len,
-                                       now.lo_stored_queue_len,
-                                       self.store_queue_size));
-            println!("{}",
-                     Self::queue_stats("commit queue",
-                                       before.lo_committed_queue_len,
-                                       now.lo_committed_queue_len,
-                                       self.commit_queue_size));
+            Self::print_queue_stats("receive queue",
+                                    before.lo_received_queue_len,
+                                    now.lo_received_queue_len,
+                                    self.receive_queue_size);
+            Self::print_queue_stats("store queue",
+                                    before.lo_stored_queue_len,
+                                    now.lo_stored_queue_len,
+                                    self.store_queue_size);
+            Self::print_queue_stats("commit queue",
+                                    before.lo_committed_queue_len,
+                                    now.lo_committed_queue_len,
+                                    self.commit_queue_size);
             println!();
 
             // `now` is the `before` status in the next loop
@@ -164,27 +165,37 @@ impl<'a> Monitor<'a> {
         }
     }
 
-    fn queue_stats(queue_name: &str, used_last: usize, used_now: usize, size: usize) -> String {
+    fn print_queue_stats(queue_name: &str, used_last: usize, used_now: usize, size: usize) {
         let percentage = used_now as f32 / size as f32 * 100_f32;
-        format!("    {:16} - used {:6} of {:6}, {:6.2}% full, changed by: {:+}",
-                queue_name,
-                used_now,
-                size,
-                percentage,
-                used_now as i64 - used_last as i64)
+        println!("    {:16} - used {:6} of {:6}, {:6.2}% full, changed by: {:+6}",
+                 queue_name,
+                 used_now,
+                 size,
+                 percentage,
+                 used_now as i64 - used_last as i64)
     }
 
-    fn thread_stats(thread_name: &str,
-                    seen_last: u64,
-                    seen_now: u64,
-                    duration: Duration)
-                    -> String {
-        let duration = duration.as_secs() as f32 + duration.subsec_nanos() as f32 / 1_000_000_f32;
-        let speed = (seen_now - seen_last) as f32 / duration;
-        format!("    {:16} - processed: {:7}, speed: {:.1} Lo/s",
-                thread_name,
-                seen_now,
-                speed)
+    fn print_thread_stats(thread_name: &str,
+                          seen_last: u64,
+                          seen_now: u64,
+                          difference: Duration,
+                          duration: Duration) {
+        // since start
+        let avg_duration = duration.as_secs() as f32 +
+                           duration.subsec_nanos() as f32 / 1_000_000_f32;
+        let avg_speed = seen_now as f32 / avg_duration;
+
+        // since last status update
+        let diff_duration = difference.as_secs() as f32 +
+                            difference.subsec_nanos() as f32 / 1_000_000_f32;
+        let diff_speed = (seen_now - seen_last) as f32 / diff_duration;
+
+        println!("    {:16} - processed: {:7}, current speed: {:7.1} Lo/s, average speed: {:7.1} \
+                  Lo/s",
+                 thread_name,
+                 seen_now,
+                 diff_speed,
+                 avg_speed)
     }
 
     /// wait for `interval` but check every `cancel_interval` if thread should be cancelled

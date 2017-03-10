@@ -103,21 +103,22 @@ increase their respective counters.
 Message printed by the monitor thread look like this:
 ```
 *******************************************************************
-    Status at 2017-03-09 14:00:20 (updated every: 10s)
+    Status at 2017-03-10 10:10:53 (updated every: 10s)
 
 Progress Overview:
-    0.08%, 19600 of 23768978 object have been migrated
+    0.01%, 1200 of 22618378 object have been migrated
 
 Processed Objects by Thread Groups:
-    observer thread  - processed:   29395, speed: 177.3 Lo/s
-    receiver thread  - processed:   21195, speed: 177.2 Lo/s
-    storer thread    - processed:   20075, speed: 177.3 Lo/s
-    committer thread - processed:   19600, speed: 149.8 Lo/s
+    observer thread  - processed:    9752, current speed:  892.7 Lo/s, average speed:  441.7 Lo/s
+    receiver thread  - processed:    1558, current speed:  142.6 Lo/s, average speed:   70.6 Lo/s
+    storer thread    - processed:    1432, current speed:  131.1 Lo/s, average speed:   64.9 Lo/s
+    committer thread - processed:    1200, current speed:  109.8 Lo/s, average speed:   54.4 Lo/s
 
 Queue Usage:
-    receive queue    - used   8196 of   8196, 100.00% full, changed by: +0
-    store queue      - used   1024 of   1024, 100.00% full, changed by: +0
-    commit queue     - used    275 of   8196,   3.36% full, changed by: +275
+    receive queue    - used   8192 of   8192, 100.00% full, changed by:  +4235
+    store queue      - used    532 of   1024,  11.82% full, changed by:    -50
+    commit queue     - used     83 of   8192,   0.39% full, changed by:    +32
+    commit queue     - used      0 of   8192,   0.00% full, changed by:     +0
 ```
 
 
