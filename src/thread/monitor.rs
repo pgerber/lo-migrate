@@ -3,6 +3,7 @@
 //! The monitor thread show stats to the user
 
 #![cfg_attr(feature = "clippy", allow(float_arithmetic))]
+#![cfg_attr(feature = "clippy", allow(cast_possible_truncation))]
 #![cfg_attr(feature = "clippy", allow(cast_precision_loss))]
 #![cfg_attr(feature = "clippy", allow(print_stdout))]
 
