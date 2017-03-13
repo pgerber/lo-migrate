@@ -77,8 +77,8 @@ impl<'a> Monitor<'a> {
 
             let now = Stats {
                 instant: Instant::now(),
-                difference: before.instant.elapsed(),
-                duration: start_instant.elapsed(),
+                difference: before.instant.elapsed(), // time passed since last loop
+                duration: start_instant.elapsed(), // time passed since start
                 lo_observed: self.stats.lo_observed.load(Ordering::Relaxed),
                 lo_received: self.stats.lo_received.load(Ordering::Relaxed),
                 lo_stored: self.stats.lo_stored.load(Ordering::Relaxed),
@@ -95,10 +95,11 @@ impl<'a> Monitor<'a> {
             println!();
 
             println!("Progress Overview:");
-            println!("    {}, {} of {} object have been migrated",
+            println!("    {}, {} of {} object have been migrated, ETA: {}",
                      Self::progress(now.lo_committed, total),
                      now.lo_committed,
-                     total.map(|v| format!("{}", v)).unwrap_or_else(|| "UNKOWN".to_string()));
+                     total.map(|v| format!("{}", v)).unwrap_or_else(|| "UNKOWN".to_string()),
+                     Self::calculate_eta(now.lo_committed, total, now.duration));
             println!();
 
             println!("Processed Objects by Thread Groups:");
@@ -162,6 +163,24 @@ impl<'a> Monitor<'a> {
             format!("{:.2}%", percentage)
         } else {
             "UNKNOWN".to_string()
+        }
+    }
+
+    fn calculate_eta(lo_committed: u64, total: Option<u64>, duration: Duration) -> String {
+        let secs = duration.as_secs();
+        match total {
+            Some(total) if lo_committed > 0 && secs > 0 => {
+                let eta_secs = (total as f32 / lo_committed as f32 * secs as f32 - secs as f32) as
+                               i64;
+                let eta = chrono::Local::now() + chrono::Duration::seconds(eta_secs);
+                let (h, m, s) = (eta_secs / 3600, eta_secs / 60 % 60, eta_secs % 60);
+                format!("{} ({}h {:02}m {:02}s)",
+                        eta.format("%Y-%m-%d %H:%M:%S"),
+                        h,
+                        m,
+                        s)
+            }
+            _ => "UNKNOWN".to_string(),
         }
     }
 

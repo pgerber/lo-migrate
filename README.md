@@ -104,7 +104,7 @@ increase their respective counters.
 Message printed by the monitor thread look like this:
 ```
 *******************************************************************
-    Status at 2017-03-10 10:10:53 (updated every: 10s)
+    Status at 2017-03-10 10:10:53 (updated every: 10s), ETA: 2017-03-10 11:15:33  (1h 04m 40s)
 
 Progress Overview:
     0.01%, 1200 of 22618378 object have been migrated
