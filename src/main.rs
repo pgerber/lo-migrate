@@ -90,7 +90,7 @@ impl Args {
                 .value_name("INT")
                 .help("Number of storer threads"))
             .arg(Arg::with_name("committer_threads")
-                .long("comitter-threads")
+                .long("committer-threads")
                 .value_name("INT")
                 .help("Number of committer threads"))
             .arg(Arg::with_name("receiver_queue")
