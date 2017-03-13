@@ -204,7 +204,8 @@ fn connect_to_s3(access_key: &str,
             .expect("Cannot connect to S3");
         let tls = hyper_rustls::TlsClient::new();
         let connector = HttpsConnector::new(tls);
-        let pool = client::pool::Pool::with_connector(client::pool::Config { max_idle: 1 }, connector);
+        let pool = client::pool::Pool::with_connector(client::pool::Config { max_idle: 1 },
+                                                      connector);
         let mut client = Client::with_connector(pool);
         client.set_redirect_policy(RedirectPolicy::FollowNone);
         conns.push(S3Client::with_request_dispatcher(client, credentials, endpoint.clone()));
@@ -310,9 +311,10 @@ fn main() {
         for conn in committer_pg_conns {
             let thread_stat = thread_stat.clone();
             let rx = cmt_rx.clone();
+            let commit_chunk_size = args.commit_chunk_size;
             threads.push(thread::spawn(move || {
                 let committer = Committer::new(&thread_stat, &conn);
-                let result = committer.start_worker(rx, 100 /* commit 100 Lo at a time */);
+                let result = committer.start_worker(rx, commit_chunk_size);
                 print_thread_result(&result, &thread_stat);
             }));
         }
