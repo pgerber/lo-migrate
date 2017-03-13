@@ -10,6 +10,7 @@ extern crate aws_sdk_rust;
 extern crate url;
 extern crate hyper;
 extern crate two_lock_queue;
+extern crate hyper_rustls;
 
 use postgres::{Connection, TlsMode};
 use url::Url;
@@ -18,7 +19,8 @@ use aws_sdk_rust::aws::s3::endpoint::Endpoint;
 use aws_sdk_rust::aws::s3::endpoint::Signature;
 use aws_sdk_rust::aws::common::region::Region;
 use aws_sdk_rust::aws::common::credentials::ParametersProvider;
-use hyper::client::Client;
+use hyper::client::{self, Client, RedirectPolicy};
+use hyper::net::HttpsConnector;
 use lo_migrate::thread::{Committer, Monitor, Observer, Receiver, Storer, ThreadStat};
 use sha2::Sha256;
 use std::fmt;
@@ -200,7 +202,12 @@ fn connect_to_s3(access_key: &str,
     for _ in 0..count {
         let credentials = ParametersProvider::with_parameters(access_key, secret_key, None)
             .expect("Cannot connect to S3");
-        conns.push(S3Client::new(credentials, endpoint.clone()))
+        let tls = hyper_rustls::TlsClient::new();
+        let connector = HttpsConnector::new(tls);
+        let pool = client::pool::Pool::with_connector(client::pool::Config { max_idle: 1 }, connector);
+        let mut client = Client::with_connector(pool);
+        client.set_redirect_policy(RedirectPolicy::FollowNone);
+        conns.push(S3Client::with_request_dispatcher(client, credentials, endpoint.clone()));
     }
     conns
 }

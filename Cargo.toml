@@ -11,7 +11,7 @@ fallible-iterator = "*"
 sha1 = { version = "*", git = "https://github.com/RustCrypto/hashes" }
 sha2 = "*"
 spin = "*"
-postgres = "0.13"
+postgres = "0.13.0"
 postgres_large_object = "0.5.1"
 aws-sdk-rust = "*"
 rustc-serialize = "*"
@@ -24,6 +24,7 @@ base64 = "*"
 log = "*"
 env_logger = "*"
 url = "*"
+hyper-rustls = "*"
 
 [replace]
 # doesn't build Rust Nightly but we need nightly for the atomic integers
