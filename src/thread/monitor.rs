@@ -21,7 +21,7 @@ use two_lock_queue::Receiver;
 struct Stats {
     instant: Instant,
     difference: Duration,
-    duration: Duration,
+    duration: Option<Duration>,
 
     // processed `Lo`s
     lo_observed: u64,
@@ -40,7 +40,7 @@ impl Default for Stats {
         Stats {
             instant: Instant::now(),
             difference: Default::default(),
-            duration: Default::default(),
+            duration: None,
             lo_observed: 0,
             lo_received: 0,
             lo_stored: 0,
@@ -65,7 +65,7 @@ pub struct Monitor<'a> {
 impl<'a> Monitor<'a> {
     pub fn start_worker(&self, interval: Duration) {
         let cancel_interval = Duration::from_secs(1);
-        let start_instant = Instant::now();
+        let mut start_instant = None;
         let mut before: Stats = Default::default();
         let mut total = None;
 
@@ -75,10 +75,18 @@ impl<'a> Monitor<'a> {
                 total = *self.stats.lo_total.lock();
             }
 
+            if start_instant.is_none() {
+                // only fetch total once to avoid locking
+                start_instant = *self.stats.start.lock();
+            }
+
+
             let now = Stats {
                 instant: Instant::now(),
-                difference: before.instant.elapsed(), // time passed since last loop
-                duration: start_instant.elapsed(), // time passed since start
+                // time passed since last loop
+                difference: before.instant.elapsed(),
+                // time passed since start
+                duration: start_instant.map_or(None, |i| Some(i.elapsed())),
                 lo_observed: self.stats.lo_observed.load(Ordering::Relaxed),
                 lo_received: self.stats.lo_received.load(Ordering::Relaxed),
                 lo_stored: self.stats.lo_stored.load(Ordering::Relaxed),
@@ -166,8 +174,8 @@ impl<'a> Monitor<'a> {
         }
     }
 
-    fn calculate_eta(lo_committed: u64, total: Option<u64>, duration: Duration) -> String {
-        let secs = duration.as_secs();
+    fn calculate_eta(lo_committed: u64, total: Option<u64>, duration: Option<Duration>) -> String {
+        let secs = duration.map_or(0, |i| i.as_secs());
         match total {
             Some(total) if lo_committed > 0 && secs > 0 => {
                 let eta_secs = (total as f32 / lo_committed as f32 * secs as f32 - secs as f32) as
@@ -198,23 +206,30 @@ impl<'a> Monitor<'a> {
                           seen_last: u64,
                           seen_now: u64,
                           difference: Duration,
-                          duration: Duration) {
-        // since start
-        let avg_duration = duration.as_secs() as f32 +
-                           duration.subsec_nanos() as f32 / 1_000_000_f32;
-        let avg_speed = seen_now as f32 / avg_duration;
+                          duration: Option<Duration>) {
+        if let Some(duration) = duration {
+            // since start
+            let avg_duration = duration.as_secs() as f32 +
+                               duration.subsec_nanos() as f32 / 1_000_000_000_f32;
+            let avg_speed = seen_now as f32 / avg_duration;
 
-        // since last status update
-        let diff_duration = difference.as_secs() as f32 +
-                            difference.subsec_nanos() as f32 / 1_000_000_f32;
-        let diff_speed = (seen_now - seen_last) as f32 / diff_duration;
+            // since last status update
+            let diff_duration = difference.as_secs() as f32 +
+                                difference.subsec_nanos() as f32 / 1_000_000_000_f32;
+            let diff_speed = (seen_now - seen_last) as f32 / diff_duration;
 
-        println!("    {:16} - processed: {:7}, current speed: {:7.1} Lo/s, average speed: {:7.1} \
-                  Lo/s",
-                 thread_name,
-                 seen_now,
-                 diff_speed,
-                 avg_speed)
+            println!("    {:16} - processed: {:7}, current speed: {:7.1} Lo/s, average speed: \
+                      {:7.1} Lo/s",
+                     thread_name,
+                     seen_now,
+                     diff_speed,
+                     avg_speed);
+        } else {
+            println!("    {:16} - processed: {:7}, current speed: UNKNOWN Lo/s, average speed: \
+                      UNKNOWN Lo/s",
+                     thread_name,
+                     seen_now);
+        }
     }
 
     /// wait for `interval` but check every `cancel_interval` if thread should be cancelled

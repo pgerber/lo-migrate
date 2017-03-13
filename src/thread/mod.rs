@@ -19,6 +19,7 @@ use error::{MigrationError, Result};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::atomic::Ordering;
+use std::time::Instant;
 use lo::Lo;
 use spin;
 use postgres;
@@ -28,6 +29,11 @@ use postgres;
 pub struct ThreadStat {
     /// Used to implement cancellation points within the threads
     cancelled: Arc<AtomicBool>,
+
+    /// Start instant
+    ///
+    /// Contains the time when transfering was started. Set by the observer thread.
+    start: Arc<spin::Mutex<Option<Instant>>>,
 
     /// Total number of large object
     ///
@@ -66,6 +72,7 @@ impl ThreadStat {
     pub fn new() -> Self {
         ThreadStat {
             cancelled: Arc::new(AtomicBool::new(false)),
+            start: Arc::new(spin::Mutex::new(None)),
             lo_total: Arc::new(spin::Mutex::new(None)),
             lo_observed: Arc::new(AtomicU64::new(0)),
             lo_received: Arc::new(AtomicU64::new(0)),

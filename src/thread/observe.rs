@@ -11,6 +11,7 @@ use serialize::hex::FromHex;
 use std::convert::TryFrom;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::time::Instant;
 use two_lock_queue::Sender;
 
 use error::Result;
@@ -35,6 +36,9 @@ impl<'a> Observer<'a> {
         // count Large Objects
         let count = Some(self.count_objects(&trx)?);
         *self.stats.lo_total.lock() = count;
+
+        // set migration/transfer start time
+        *self.stats.start.lock() = Some(Instant::now());
 
         let stmt = self.conn
             .prepare("SELECT hash, data, size, mime_type FROM _nice_binary where sha2 is NULL")?;
