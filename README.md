@@ -25,7 +25,7 @@ FLAGS:
 OPTIONS:
         --commit-chunk <INT>        Number of SHA2 hashes commited per DB transaction
         --committer-queue <INT>     Size of the committer queue
-        --comitter-threads <INT>    Number of committer threads
+        --committer-threads <INT>   Number of committer threads
         --in-mem-max <INT>          Max. size of Large Object to keep in memory (in KiB)
     -i, --interval <SECS>           Interval in which stats are shown (in secs)
     -p, --pg-url <URL>              Url to connect to postgres (USER:PASS@HOST/DB_NAME)
@@ -109,17 +109,17 @@ Message printed by the monitor thread look like this:
 Progress Overview:
     0.01%, 1200 of 22618378 object have been migrated
 
-Processed Objects by Thread Groups:
-    observer thread  - processed:    9752, current speed:  892.7 Lo/s, average speed:  441.7 Lo/s
-    receiver thread  - processed:    1558, current speed:  142.6 Lo/s, average speed:   70.6 Lo/s
-    storer thread    - processed:    1432, current speed:  131.1 Lo/s, average speed:   64.9 Lo/s
-    committer thread - processed:    1200, current speed:  109.8 Lo/s, average speed:   54.4 Lo/s
+Processed Objects by Thread Pools:
+    observer thread   - processed:    9752, current speed:  892.7 Lo/s, average speed:  441.7 Lo/s
+    receiver threads  - processed:    1558, current speed:  142.6 Lo/s, average speed:   70.6 Lo/s
+    storer threads    - processed:    1432, current speed:  131.1 Lo/s, average speed:   64.9 Lo/s
+    committer threads - processed:    1200, current speed:  109.8 Lo/s, average speed:   54.4 Lo/s
 
 Queue Usage:
-    receive queue    - used   8192 of   8192, 100.00% full, changed by:  +4235
-    store queue      - used    532 of   1024,  11.82% full, changed by:    -50
-    commit queue     - used     83 of   8192,   0.39% full, changed by:    +32
-    commit queue     - used      0 of   8192,   0.00% full, changed by:     +0
+    receive queue     - used   8192 of   8192, 100.00% full, changed by:  +4235
+    store queue       - used    532 of   1024,  11.82% full, changed by:    -50
+    commit queue      - used     83 of   8192,   0.39% full, changed by:    +32
+    commit queue      - used      0 of   8192,   0.00% full, changed by:     +0
 ```
 
 

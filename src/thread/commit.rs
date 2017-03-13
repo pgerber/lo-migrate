@@ -49,7 +49,7 @@ impl<'a> Committer<'a> {
         }
 
         debug_assert_eq!(lo_chunk.capacity(), chunk_size, "capacity of `Vec` changed");
-        info!("thread has completed its mission, rx queue hang up");
+        info!("thread has completed its mission, sender hung up queue");
         Ok(())
     }
 

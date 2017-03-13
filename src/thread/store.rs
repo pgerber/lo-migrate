@@ -41,7 +41,7 @@ impl<'a> Storer<'a> {
             self.stats.cancellation_point()?;
         }
 
-        info!("thread has completed its mission, rx queue hang up");
+        info!("thread has completed its mission, sender hung up queue");
         Ok(())
     }
 }

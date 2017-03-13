@@ -116,17 +116,17 @@ impl<'a> Monitor<'a> {
                                      now.lo_observed,
                                      now.difference,
                                      now.duration);
-            Self::print_thread_stats("receiver thread",
+            Self::print_thread_stats("receiver threads",
                                      before.lo_received,
                                      now.lo_received,
                                      now.difference,
                                      now.duration);
-            Self::print_thread_stats("storer thread",
+            Self::print_thread_stats("storer threads",
                                      before.lo_stored,
                                      now.lo_stored,
                                      now.difference,
                                      now.duration);
-            Self::print_thread_stats("committer thread",
+            Self::print_thread_stats("committer threads",
                                      before.lo_committed,
                                      now.lo_committed,
                                      now.difference,
@@ -194,7 +194,7 @@ impl<'a> Monitor<'a> {
 
     fn print_queue_stats(queue_name: &str, used_last: usize, used_now: usize, size: usize) {
         let percentage = used_now as f32 / size as f32 * 100_f32;
-        println!("    {:16} - used {:6} of {:6}, {:6.2}% full, changed by: {:+6}",
+        println!("    {:17} - used {:6} of {:6}, {:6.2}% full, changed by: {:+6}",
                  queue_name,
                  used_now,
                  size,
@@ -218,14 +218,14 @@ impl<'a> Monitor<'a> {
                                 difference.subsec_nanos() as f32 / 1_000_000_000_f32;
             let diff_speed = (seen_now - seen_last) as f32 / diff_duration;
 
-            println!("    {:16} - processed: {:7}, current speed: {:7.1} Lo/s, average speed: \
+            println!("    {:17} - processed: {:7}, current speed: {:7.1} Lo/s, average speed: \
                       {:7.1} Lo/s",
                      thread_name,
                      seen_now,
                      diff_speed,
                      avg_speed);
         } else {
-            println!("    {:16} - processed: {:7}, current speed: UNKNOWN Lo/s, average speed: \
+            println!("    {:17} - processed: {:7}, current speed: UNKNOWN Lo/s, average speed: \
                       UNKNOWN Lo/s",
                      thread_name,
                      seen_now);
