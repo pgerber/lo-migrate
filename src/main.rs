@@ -328,7 +328,7 @@ fn main() {
             let thread_stat = thread_stat.clone();
             let rx = cmt_rx.clone();
             let commit_chunk_size = args.commit_chunk_size;
-            let name = format!("storer_{}", no);
+            let name = format!("committer_{}", no);
             threads.push(thread::Builder::new()
                 .name(name.clone())
                 .spawn(move || {
