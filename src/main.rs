@@ -28,7 +28,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use lo_migrate::error::Result;
+use lo_migrate::error::MigrationError;
 
 #[derive(Debug)]
 struct Args {
@@ -213,15 +213,14 @@ fn connect_to_s3(access_key: &str,
     conns
 }
 
-fn print_thread_result(result: &Result<()>, thread_stat: &ThreadStat) {
-    match *result {
-        Err(ref e) if e.is_cancelled() => (),
-        Err(ref e) if e.is_queue_hangup() => (),
-        Err(ref e) => {
-            println!("error in thread: {:?}", e);
+fn handle_thread_error(error: &MigrationError, thread_name: &str, thread_stat: &ThreadStat) {
+    match *error {
+        MigrationError::ThreadCancelled |
+        MigrationError::SendError(_) => (),
+        ref err => {
             thread_stat.cancel();
+            println!("ERROR: thread {}: {:?}", thread_name, err);
         }
-        Ok(_) => (),
     };
 }
 
@@ -274,78 +273,121 @@ fn main() {
             let conn = observer_pg_conns.into_iter().next().unwrap();
             let thread_stat = thread_stat.clone();
             let tx = rcv_tx.clone();
-            threads.push(thread::spawn(move || {
-                let observer = Observer::new(&thread_stat, &conn);
-                let result = observer.start_worker(tx, 1024);
-                print_thread_result(&result, &thread_stat);
-            }));
+            threads.push(thread::Builder::new()
+                .name("observer".to_string())
+                .spawn(move || {
+                    let observer = Observer::new(&thread_stat, &conn);
+                    let result = observer.start_worker(tx, 1024);
+                    if let Err(e) = result {
+                        handle_thread_error(&e, "observer", &thread_stat);
+                    };
+                })
+                .unwrap());
         }
 
         // create receiver threads
-        for conn in receiver_pg_conns {
+        for (no, conn) in receiver_pg_conns.into_iter().enumerate() {
             let thread_stat = thread_stat.clone();
             let rx = rcv_rx.clone();
             let tx = str_tx.clone();
             let max_in_memory = args.max_in_memory;
-            threads.push(thread::spawn(move || {
-                let receiver = Receiver::new(&thread_stat, &conn);
-                let result = receiver.start_worker::<TargetDigest>(rx, tx, max_in_memory);
-                print_thread_result(&result, &thread_stat);
-            }));
+            let name = format!("receiver_{}", no);
+            threads.push(thread::Builder::new()
+                .name(name.clone())
+                .spawn(move || {
+                    let receiver = Receiver::new(&thread_stat, &conn);
+                    let result = receiver.start_worker::<TargetDigest>(rx, tx, max_in_memory);
+                    if let Err(e) = result {
+                        handle_thread_error(&e, &name, &thread_stat);
+                    };
+                })
+                .unwrap());
         }
 
         // create storer threads
-        for conn in storer_s3_conns {
+        for (no, conn) in storer_s3_conns.into_iter().enumerate() {
             let thread_stat = thread_stat.clone();
             let rx = str_rx.clone();
             let tx = cmt_tx.clone();
             let bucket_name = args.s3_bucket_name.to_string();
-            threads.push(thread::spawn(move || {
-                let storer = Storer::new(&thread_stat);
-                let result = storer.start_worker(rx, tx, &conn, &bucket_name);
-                print_thread_result(&result, &thread_stat);
-            }));
+            let name = format!("storer_{}", no);
+            threads.push(thread::Builder::new()
+                .name(name.clone())
+                .spawn(move || {
+                    let storer = Storer::new(&thread_stat);
+                    let result = storer.start_worker(rx, tx, &conn, &bucket_name);
+                    if let Err(e) = result {
+                        handle_thread_error(&e, &name, &thread_stat);
+                    };
+                })
+                .unwrap());
         }
 
         // create committer thread
-        for conn in committer_pg_conns {
+        for (no, conn) in committer_pg_conns.into_iter().enumerate() {
             let thread_stat = thread_stat.clone();
             let rx = cmt_rx.clone();
             let commit_chunk_size = args.commit_chunk_size;
-            threads.push(thread::spawn(move || {
-                let committer = Committer::new(&thread_stat, &conn);
-                let result = committer.start_worker(rx, commit_chunk_size);
-                print_thread_result(&result, &thread_stat);
-            }));
+            let name = format!("storer_{}", no);
+            threads.push(thread::Builder::new()
+                .name(name.clone())
+                .spawn(move || {
+                    let committer = Committer::new(&thread_stat, &conn);
+                    let result = committer.start_worker(rx, commit_chunk_size);
+                    if let Err(e) = result {
+                        handle_thread_error(&e, &name, &thread_stat);
+                    };
+                })
+                .unwrap());
         }
 
         // create monitor thread
+        {
+            // `Weak` references needed here because the other threads terminate when all `Sender`s
+            // or `Receiver`s were terminated (hang-up queue). If we keep a strong reference the
+            // other worker threads won't ever terminate.
+            let rcv_rx_weak = Arc::downgrade(&rcv_rx);
+            let str_rx_weak = Arc::downgrade(&str_rx);
+            let cmt_rx_weak = Arc::downgrade(&cmt_rx);
+            let monitor_interval = args.monitor_interval;
+            let thread_stat = thread_stat.clone();
 
-        // `Weak` references needed here because the other threads terminate when all `Sender`s
-        // or `Receiver`s were terminated (hang-up queue). If we keep a strong reference the other
-        // worker threads won't ever terminate.
-        let rcv_rx_weak = Arc::downgrade(&rcv_rx);
-        let str_rx_weak = Arc::downgrade(&str_rx);
-        let cmt_rx_weak = Arc::downgrade(&cmt_rx);
-        let monitor_interval = args.monitor_interval;
-
-        threads.push(thread::spawn(move || {
-            let monitor = Monitor {
-                stats: &thread_stat,
-                receive_queue: rcv_rx_weak,
-                receive_queue_size: args.receiver_queue,
-                store_queue: str_rx_weak,
-                store_queue_size: args.storer_queue,
-                commit_queue: cmt_rx_weak,
-                commit_queue_size: args.committer_queue,
-            };
-            monitor.start_worker(Duration::from_secs(monitor_interval));
-        }));
+            threads.push(thread::Builder::new()
+                .name("monitor".to_string())
+                .spawn(move || {
+                    let monitor = Monitor {
+                        stats: &thread_stat,
+                        receive_queue: rcv_rx_weak,
+                        receive_queue_size: args.receiver_queue,
+                        store_queue: str_rx_weak,
+                        store_queue_size: args.storer_queue,
+                        commit_queue: cmt_rx_weak,
+                        commit_queue_size: args.committer_queue,
+                    };
+                    monitor.start_worker(Duration::from_secs(monitor_interval));
+                })
+                .unwrap());
+        }
 
         // `Arc<_>`s for the queues are dropped here!
     }
 
     for thread in threads {
-        thread.join().unwrap();
+        let name = thread.thread().name().unwrap_or("UNNAMED").to_string();
+
+        if let Err(ref e) = thread.join() {
+            thread_stat.cancel();
+            if let Some(e) = e.downcast_ref::<&'static str>() {
+                println!("ERROR: Thread {} panicked: {}", name, e);
+            } else {
+                println!("ERROR: Thread {} panicked: {:?}", name, e);
+            }
+        };
+    }
+
+    if thread_stat.is_cancelled() {
+        println!();
+        println!("ERROR: At least one thread reported a failure, you must rerun the migration to \
+                  ensure all binary are transfered to S3");
     }
 }
