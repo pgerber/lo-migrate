@@ -12,7 +12,8 @@ pub fn commit(conn: &Connection, objects: &[Lo]) -> Result<()> {
     let tx = conn.transaction()?;
 
     for lo in objects {
-        if stmt.execute(&[lo.sha2().expect("SHA2 hash unknown"), &lo.sha1_hex()])? == 0 {
+        let sha2 = lo.sha2_base64().expect("SHA2 hash unknown");
+        if stmt.execute(&[&sha2, &lo.sha1_hex()])? == 0 {
             info!("could not update sha2 hash for lo (did it vanish?): {:?}",
                   &lo);
         }
