@@ -253,123 +253,120 @@ fn main() {
     // all threads that have been started
     let mut threads = Vec::new();
 
-    // Block is needed so the `Arc<Send<Lo>>s and `Arc<Receive<Lo>>s are dropped, hanging up the
-    // queues
+    // queue between observer and receiver threads
+    let (rcv_tx, rcv_rx) = two_lock_queue::channel(args.receiver_queue);
+    let (rcv_tx, rcv_rx) = (Arc::new(rcv_tx), Arc::new(rcv_rx));
+
+    // queue between receiver and storer threads
+    let (str_tx, str_rx) = two_lock_queue::channel(args.storer_queue);
+    let (str_tx, str_rx) = (Arc::new(str_tx), Arc::new(str_rx));
+
+    // queue between committer thread and committer thread
+    let (cmt_tx, cmt_rx) = two_lock_queue::channel(args.committer_queue);
+    let (cmt_tx, cmt_rx) = (Arc::new(cmt_tx), Arc::new(cmt_rx));
+
+    // create observer thread
     {
-        // queue between observer and receiver threads
-        let (rcv_tx, rcv_rx) = two_lock_queue::channel(args.receiver_queue);
-        let (rcv_tx, rcv_rx) = (Arc::new(rcv_tx), Arc::new(rcv_rx));
+        let conn = observer_pg_conns.into_iter().next().unwrap();
+        let thread_stat = thread_stat.clone();
+        let tx = rcv_tx.clone();
+        threads.push(thread::Builder::new()
+            .name("observer".to_string())
+            .spawn(move || {
+                let observer = Observer::new(&thread_stat, &conn);
+                let result = observer.start_worker(tx, 1024);
+                if let Err(e) = result {
+                    handle_thread_error(&e, "observer", &thread_stat);
+                };
+            })
+            .unwrap());
+    }
 
-        // queue between receiver and storer threads
-        let (str_tx, str_rx) = two_lock_queue::channel(args.storer_queue);
-        let (str_tx, str_rx) = (Arc::new(str_tx), Arc::new(str_rx));
+    // create receiver threads
+    for (no, conn) in receiver_pg_conns.into_iter().enumerate() {
+        let thread_stat = thread_stat.clone();
+        let rx = rcv_rx.clone();
+        let tx = str_tx.clone();
+        let max_in_memory = args.max_in_memory;
+        let name = format!("receiver_{}", no);
+        threads.push(thread::Builder::new()
+            .name(name.clone())
+            .spawn(move || {
+                let receiver = Receiver::new(&thread_stat, &conn);
+                let result = receiver.start_worker::<TargetDigest>(rx, tx, max_in_memory);
+                if let Err(e) = result {
+                    handle_thread_error(&e, &name, &thread_stat);
+                };
+            })
+            .unwrap());
+    }
 
-        // queue between committer thread and committer thread
-        let (cmt_tx, cmt_rx) = two_lock_queue::channel(args.committer_queue);
-        let (cmt_tx, cmt_rx) = (Arc::new(cmt_tx), Arc::new(cmt_rx));
+    // create storer threads
+    for (no, conn) in storer_s3_conns.into_iter().enumerate() {
+        let thread_stat = thread_stat.clone();
+        let rx = str_rx.clone();
+        let tx = cmt_tx.clone();
+        let bucket_name = args.s3_bucket_name.to_string();
+        let name = format!("storer_{}", no);
+        threads.push(thread::Builder::new()
+            .name(name.clone())
+            .spawn(move || {
+                let storer = Storer::new(&thread_stat);
+                let result = storer.start_worker(rx, tx, &conn, &bucket_name);
+                if let Err(e) = result {
+                    handle_thread_error(&e, &name, &thread_stat);
+                };
+            })
+            .unwrap());
+    }
 
-        // create observer thread
-        {
-            let conn = observer_pg_conns.into_iter().next().unwrap();
-            let thread_stat = thread_stat.clone();
-            let tx = rcv_tx.clone();
-            threads.push(thread::Builder::new()
-                .name("observer".to_string())
-                .spawn(move || {
-                    let observer = Observer::new(&thread_stat, &conn);
-                    let result = observer.start_worker(tx, 1024);
-                    if let Err(e) = result {
-                        handle_thread_error(&e, "observer", &thread_stat);
-                    };
-                })
-                .unwrap());
-        }
+    // create committer thread
+    for (no, conn) in committer_pg_conns.into_iter().enumerate() {
+        let thread_stat = thread_stat.clone();
+        let rx = cmt_rx.clone();
+        let commit_chunk_size = args.commit_chunk_size;
+        let name = format!("committer_{}", no);
+        threads.push(thread::Builder::new()
+            .name(name.clone())
+            .spawn(move || {
+                let committer = Committer::new(&thread_stat, &conn);
+                let result = committer.start_worker(rx, commit_chunk_size);
+                if let Err(e) = result {
+                    handle_thread_error(&e, &name, &thread_stat);
+                };
+            })
+            .unwrap());
+    }
 
-        // create receiver threads
-        for (no, conn) in receiver_pg_conns.into_iter().enumerate() {
-            let thread_stat = thread_stat.clone();
-            let rx = rcv_rx.clone();
-            let tx = str_tx.clone();
-            let max_in_memory = args.max_in_memory;
-            let name = format!("receiver_{}", no);
-            threads.push(thread::Builder::new()
-                .name(name.clone())
-                .spawn(move || {
-                    let receiver = Receiver::new(&thread_stat, &conn);
-                    let result = receiver.start_worker::<TargetDigest>(rx, tx, max_in_memory);
-                    if let Err(e) = result {
-                        handle_thread_error(&e, &name, &thread_stat);
-                    };
-                })
-                .unwrap());
-        }
+    // create monitor thread
+    {
+        // `Weak` references needed here because the other threads terminate when all `Sender`s
+        // or `Receiver`s were terminated (hang-up queue). If we keep a strong reference the
+        // other worker threads won't ever terminate.
+        let rcv_rx_weak = Arc::downgrade(&rcv_rx);
+        drop(rcv_rx);
+        let str_rx_weak = Arc::downgrade(&str_rx);
+        drop(str_rx);
+        let cmt_rx_weak = Arc::downgrade(&cmt_rx);
+        drop(cmt_rx);
+        let monitor_interval = args.monitor_interval;
+        let thread_stat = thread_stat.clone();
 
-        // create storer threads
-        for (no, conn) in storer_s3_conns.into_iter().enumerate() {
-            let thread_stat = thread_stat.clone();
-            let rx = str_rx.clone();
-            let tx = cmt_tx.clone();
-            let bucket_name = args.s3_bucket_name.to_string();
-            let name = format!("storer_{}", no);
-            threads.push(thread::Builder::new()
-                .name(name.clone())
-                .spawn(move || {
-                    let storer = Storer::new(&thread_stat);
-                    let result = storer.start_worker(rx, tx, &conn, &bucket_name);
-                    if let Err(e) = result {
-                        handle_thread_error(&e, &name, &thread_stat);
-                    };
-                })
-                .unwrap());
-        }
-
-        // create committer thread
-        for (no, conn) in committer_pg_conns.into_iter().enumerate() {
-            let thread_stat = thread_stat.clone();
-            let rx = cmt_rx.clone();
-            let commit_chunk_size = args.commit_chunk_size;
-            let name = format!("committer_{}", no);
-            threads.push(thread::Builder::new()
-                .name(name.clone())
-                .spawn(move || {
-                    let committer = Committer::new(&thread_stat, &conn);
-                    let result = committer.start_worker(rx, commit_chunk_size);
-                    if let Err(e) = result {
-                        handle_thread_error(&e, &name, &thread_stat);
-                    };
-                })
-                .unwrap());
-        }
-
-        // create monitor thread
-        {
-            // `Weak` references needed here because the other threads terminate when all `Sender`s
-            // or `Receiver`s were terminated (hang-up queue). If we keep a strong reference the
-            // other worker threads won't ever terminate.
-            let rcv_rx_weak = Arc::downgrade(&rcv_rx);
-            let str_rx_weak = Arc::downgrade(&str_rx);
-            let cmt_rx_weak = Arc::downgrade(&cmt_rx);
-            let monitor_interval = args.monitor_interval;
-            let thread_stat = thread_stat.clone();
-
-            threads.push(thread::Builder::new()
-                .name("monitor".to_string())
-                .spawn(move || {
-                    let monitor = Monitor {
-                        stats: &thread_stat,
-                        receive_queue: rcv_rx_weak,
-                        receive_queue_size: args.receiver_queue,
-                        store_queue: str_rx_weak,
-                        store_queue_size: args.storer_queue,
-                        commit_queue: cmt_rx_weak,
-                        commit_queue_size: args.committer_queue,
-                    };
-                    monitor.start_worker(Duration::from_secs(monitor_interval));
-                })
-                .unwrap());
-        }
-
-        // `Arc<_>`s for the queues are dropped here!
+        threads.push(thread::Builder::new()
+            .name("monitor".to_string())
+            .spawn(move || {
+                let monitor = Monitor {
+                    stats: &thread_stat,
+                    receive_queue: rcv_rx_weak,
+                    receive_queue_size: args.receiver_queue,
+                    store_queue: str_rx_weak,
+                    store_queue_size: args.storer_queue,
+                    commit_queue: cmt_rx_weak,
+                    commit_queue_size: args.committer_queue,
+                };
+                monitor.start_worker(Duration::from_secs(monitor_interval));
+            })
+            .unwrap());
     }
 
     for thread in threads {
