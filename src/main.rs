@@ -345,10 +345,13 @@ fn main() {
         // other worker threads won't ever terminate.
         let rcv_rx_weak = Arc::downgrade(&rcv_rx);
         drop(rcv_rx);
+        drop(rcv_tx);
         let str_rx_weak = Arc::downgrade(&str_rx);
         drop(str_rx);
+        drop(str_tx);
         let cmt_rx_weak = Arc::downgrade(&cmt_rx);
         drop(cmt_rx);
+        drop(cmt_tx);
         let monitor_interval = args.monitor_interval;
         let thread_stat = thread_stat.clone();
 
