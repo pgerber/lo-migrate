@@ -53,6 +53,33 @@ Logging can be enabled via `RUST_LOG` environment variable, for instance `RUST_L
 messages. Logging is provided [env_logger](https://crates.io/crates/env_logger) whose
 [documentation](doc.rust-lang.org/log/env_logger) provides more examples.
 
+# Installation
+
+## Compiling the Code
+
+This code uses features only available in the nightly builds of the Rust Compiler. Nightly is unstable and breaking
+changes may be introduced at any time. You may want to install a particular verison of nightly to make sure it keeps
+compiling. See also [Troubleshooting](#troubleshooting).
+
+1. install [rustup](https://www.rustup.rs/) (use default settings)
+2. install nightly: `$ rustup toolchain install nightly`
+3. switch to nightly as default toolchain `$ rustup default nightly`
+3. clone this repository: `$ git clone https://github.com/pgerber/lo-migrate.git`
+4. cd into the newly checked out repository: `$ cd lo-migrate`
+4. build the code:  `$ cargo build --release`
+5. execute the binary: `$ cargo run --release -- …` ('…' are the parameters passed on to the executable)
+
+   You can also run the binary directly, it is located at `target/release/lo_migrate_cli`.
+
+## Troubleshooting
+
+* If compilation of openssl-sys fails, make sure you have the dev packages for openSSL or LibreSSL installed as well as
+  the pkg-config build tool. On Debian  based systems you can do so via `$ sudo apt-get install libssl-dev
+  pkg-config`. See [openssl-sys](https://github.com/sfackler/rust-openssl)' README for more details.
+* If the compilation fails, try installing this particular nightly version`$ rustup toolchain install
+  nightly-2017-03-15` and making it your default `$ rustup default nightly-2017-03-15`. Lo-migrate has been tested
+  against this version.
+
 # Design
 
 The objects are represented as [`lo`][lo]`::`[`Lo`][lo]s within the software. This objects are passed through multiple
