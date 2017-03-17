@@ -81,7 +81,6 @@ impl<'a> Monitor<'a> {
                 start_instant = *self.stats.start.lock();
             }
 
-
             let now = Stats {
                 instant: Instant::now(),
                 // time passed since last loop
@@ -235,13 +234,13 @@ impl<'a> Monitor<'a> {
 
     /// wait for `interval` but check every `cancel_interval` if thread should be cancelled
     ///
-    /// returns Err(_) immediatly if thread should be cancelled and Ok(_) after `interval`
+    /// returns Err(_) immediately if thread should be cancelled and Ok(_) after `interval`
     /// otherwise.
     fn wait_for_at_most(&self, duration: Duration, cancel_interval: Duration) -> Result<(), ()> {
         let instant = Instant::now();
         while instant.elapsed() < duration {
             thread::sleep(cancel_interval);
-            if self.are_all_queues_dropped() {
+            if self.are_all_queues_dropped() || self.stats.is_cancelled() {
                 return Err(());
             }
         }

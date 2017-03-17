@@ -218,8 +218,7 @@ fn handle_thread_error(error: &MigrationError, thread_name: &str, thread_stat: &
         MigrationError::ThreadCancelled |
         MigrationError::SendError(_) => (),
         ref err => {
-            thread_stat.cancel();
-            println!("ERROR: thread {}: {:?}", thread_name, err);
+            panic!("ERROR: thread {}: {:?}", thread_name, err);
         }
     };
 }
@@ -372,12 +371,13 @@ fn main() {
             .unwrap());
     }
 
+    let mut failure_count = 0;
     for thread in threads {
         let name = thread.thread().name().unwrap_or("UNNAMED").to_string();
 
         if let Err(ref e) = thread.join() {
-            thread_stat.cancel();
-            if let Some(e) = e.downcast_ref::<&'static str>() {
+            failure_count += 1;
+            if let Some(e) = e.downcast_ref::<String>() {
                 println!("ERROR: Thread {} panicked: {}", name, e);
             } else {
                 println!("ERROR: Thread {} panicked: {:?}", name, e);
@@ -385,7 +385,7 @@ fn main() {
         };
     }
 
-    if thread_stat.is_cancelled() {
+    if failure_count > 0 {
         println!();
         println!("ERROR: At least one thread reported a failure, you must rerun the migration to \
                   ensure all binary are transfered to S3");
