@@ -28,7 +28,7 @@ OPTIONS:
         --committer-threads <INT>   Number of committer threads
         --in-mem-max <INT>          Max. size of Large Object to keep in memory (in KiB)
     -i, --interval <SECS>           Interval in which stats are shown (in secs)
-    -p, --pg-url <URL>              Url to connect to postgres (USER:PASS@HOST/DB_NAME)
+    -p, --pg-url <URL>              Url to connect to postgres (postgresql://USER:PASS@HOST/DB_NAME)
         --receiver-queue <INT>      Size of the receiver queue
         --receiver-threads <INT>    Number of receiver threads
     -k, --access-key <KEY>          S3 access key
