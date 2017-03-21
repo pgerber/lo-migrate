@@ -213,7 +213,7 @@ fn connect_to_s3(access_key: &str,
     conns
 }
 
-fn handle_thread_error(error: &MigrationError, thread_name: &str, thread_stat: &ThreadStat) {
+fn handle_thread_error(error: &MigrationError, thread_name: &str) {
     match *error {
         MigrationError::ThreadCancelled |
         MigrationError::SendError(_) => (),
@@ -275,7 +275,7 @@ fn main() {
                 let observer = Observer::new(&thread_stat, &conn);
                 let result = observer.start_worker(tx, 1024);
                 if let Err(e) = result {
-                    handle_thread_error(&e, "observer", &thread_stat);
+                    handle_thread_error(&e, "observer");
                 };
             })
             .unwrap());
@@ -294,7 +294,7 @@ fn main() {
                 let receiver = Receiver::new(&thread_stat, &conn);
                 let result = receiver.start_worker::<TargetDigest>(rx, tx, max_in_memory);
                 if let Err(e) = result {
-                    handle_thread_error(&e, &name, &thread_stat);
+                    handle_thread_error(&e, &name);
                 };
             })
             .unwrap());
@@ -313,7 +313,7 @@ fn main() {
                 let storer = Storer::new(&thread_stat);
                 let result = storer.start_worker(rx, tx, &conn, &bucket_name);
                 if let Err(e) = result {
-                    handle_thread_error(&e, &name, &thread_stat);
+                    handle_thread_error(&e, &name);
                 };
             })
             .unwrap());
@@ -331,7 +331,7 @@ fn main() {
                 let committer = Committer::new(&thread_stat, &conn);
                 let result = committer.start_worker(rx, commit_chunk_size);
                 if let Err(e) = result {
-                    handle_thread_error(&e, &name, &thread_stat);
+                    handle_thread_error(&e, &name);
                 };
             })
             .unwrap());

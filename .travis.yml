@@ -1,10 +1,12 @@
 language: rust
 rust:
   - nightly
-  # lo-migrate currently depends on nigtly features
+  # lo-migrate currently depends on nightly features
   # - beta
   # - stable
-
+script:
+  - 'cargo rustc --features clippy --lib -- -D warnings'
+  - 'cargo rustc --features clippy --bin lo_migrate_cli -- -D warnings'
 matrix:
   allow_failures:
     - rust: nightly
