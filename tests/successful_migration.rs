@@ -42,14 +42,13 @@ fn migration() {
     let (rcv_tx, rcv_rx) = queue::unbounded();
     let observer = Observer::new(&stats, &pg_conn);
     observer.start_worker(Arc::new(rcv_tx), 1024).unwrap();
-    assert_eq!(stats.lo_observed(), 5);
-    assert_eq!(stats.lo_total(), Some(5));
+    assert_eq!(extract_stats(&stats), (Some(5), 5, 0, 0, 0));
 
     // fetch large objects from postgres
     let (str_tx, str_rx) = queue::unbounded();
     let receiver = Receiver::new(&stats, &pg_conn);
     receiver.start_worker::<Sha256>(Arc::new(rcv_rx), Arc::new(str_tx), 28).unwrap();
-    assert_eq!(stats.lo_received(), 5);
+    assert_eq!(extract_stats(&stats), (Some(5), 5, 5, 0, 0));
 
     // store objects to S3
     let (cmt_tx, cmt_rx) = queue::unbounded();
@@ -59,12 +58,12 @@ fn migration() {
                       &s3_client,
                       "test_bucket")
         .unwrap();
-    assert_eq!(stats.lo_stored(), 5);
+    assert_eq!(extract_stats(&stats), (Some(5), 5, 5, 5, 0));
 
     // commit sha256 hashes to postgres
     let committer = Committer::new(&stats, &pg_conn);
     committer.start_worker(Arc::new(cmt_rx), 2).unwrap();
-    assert_eq!(stats.lo_committed(), 5);
+    assert_eq!(extract_stats(&stats), (Some(5), 5, 5, 5, 5));
 
     // verify sha256 hashes
     let sha2_hashes: Vec<String> = pg_conn.query("SELECT sha2 FROM _nice_binary WHERE sha2 <> \
@@ -96,4 +95,8 @@ fn assert_object_in_store(client: &S3Client<ParametersProvider, Client>,
 
     assert_eq!(&expected_sha256, &base64::encode(&actual_sha256.result()));
     assert_eq!(&response.content_type, mime);
+}
+
+fn extract_stats(stats: &ThreadStat) -> (Option<u64>, u64, u64, u64, u64) {
+    (stats.lo_total(), stats.lo_observed(), stats.lo_received(), stats.lo_stored(), stats.lo_committed())
 }
