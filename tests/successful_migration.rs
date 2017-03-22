@@ -1,3 +1,6 @@
+#![cfg(feature = "postgres_tests")]
+#![cfg(feature = "s3_tests")]
+
 extern crate aws_sdk_rust;
 extern crate base64;
 extern crate hyper;
@@ -16,7 +19,6 @@ use hyper::Client;
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use lo_migrate::thread::{Committer, Observer, Storer, Receiver, ThreadStat};
-
 
 // sha256 hashes of clean_data.sql sorted by OID (DB column data)
 const SHA256_HASHES: [&str; 5] = ["uAGE/a7gZcsx4fJBe7FEEs64Gc9XpGJG7FtPjale8mg=",

@@ -9,6 +9,7 @@ use aws_sdk_rust::aws::s3::s3client::S3Client;
 use hyper::{Client, Url};
 
 /// create connection to Postgres
+#[cfg(feature = "postgres_tests")]
 pub fn postgres_conn(db_name: &str) -> postgres::Connection {
     let create_conn = postgres::Connection::connect(format!("postgresql:\
                                                              //postgres@localhost/postgres"),
@@ -22,6 +23,7 @@ pub fn postgres_conn(db_name: &str) -> postgres::Connection {
 }
 
 /// create connection to S3
+#[cfg(feature = "s3_tests")]
 pub fn s3_conn() -> S3Client<ParametersProvider, Client> {
     let endpoint = Endpoint {
         region: Region::ApNortheast1,

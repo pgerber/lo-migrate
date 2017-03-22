@@ -13,7 +13,7 @@ before_install:
 script:
   - cargo rustc --features clippy --lib -- -D warnings
   - cargo rustc --features clippy --bin lo_migrate_cli -- -D warnings
-  - cargo test --verbose
+  - cargo test --no-fail-fast --features "postgres_tests s3_tests"
 services:
   - docker
 # matrix:

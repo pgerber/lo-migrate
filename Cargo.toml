@@ -31,6 +31,8 @@ hyper-rustls = "*"
 "lsio:0.1.17" = { git = "https://github.com/pgerber/lsio", branch = "nightly_0_1_17" }
 
 [features]
+postgres_tests = []
+s3_tests = []
 default = []
 
 [[bin]]

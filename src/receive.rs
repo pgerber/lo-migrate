@@ -140,6 +140,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "postgres_tests")]
     fn receive_vec_or_file() {
         let conn = postgres::Connection::connect("postgresql://postgres@localhost/postgres",
                                                  postgres::TlsMode::None)
