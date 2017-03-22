@@ -82,6 +82,26 @@ impl ThreadStat {
         }
     }
 
+    pub fn lo_total(&self) -> Option<u64> {
+        *self.lo_total.lock()
+    }
+
+    pub fn lo_observed(&self) -> u64 {
+        self.lo_observed.load(Ordering::Relaxed)
+    }
+
+    pub fn lo_received(&self) -> u64 {
+        self.lo_received.load(Ordering::Relaxed)
+    }
+
+    pub fn lo_stored(&self) -> u64 {
+        self.lo_stored.load(Ordering::Relaxed)
+    }
+
+    pub fn lo_committed(&self) -> u64 {
+        self.lo_committed.load(Ordering::Relaxed)
+    }
+
     /// True if threads have been cancelled
     pub fn is_cancelled(&self) -> bool {
         self.cancelled.load(Ordering::Relaxed)
