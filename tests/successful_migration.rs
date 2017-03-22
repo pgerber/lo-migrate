@@ -32,7 +32,7 @@ const MIME_TYPES: [&str; 5] = ["", "octet/stream", "octet/stream", "text/plain",
 #[test]
 fn migration() {
     let stats = ThreadStat::new();
-    let pg_conn = postgres_conn();
+    let pg_conn = postgres_conn("tests_successful_migration");
     let s3_client = s3_conn();
 
     // create database
@@ -98,5 +98,9 @@ fn assert_object_in_store(client: &S3Client<ParametersProvider, Client>,
 }
 
 fn extract_stats(stats: &ThreadStat) -> (Option<u64>, u64, u64, u64, u64) {
-    (stats.lo_total(), stats.lo_observed(), stats.lo_received(), stats.lo_stored(), stats.lo_committed())
+    (stats.lo_total(),
+     stats.lo_observed(),
+     stats.lo_received(),
+     stats.lo_stored(),
+     stats.lo_committed())
 }

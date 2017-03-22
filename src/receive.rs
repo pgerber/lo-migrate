@@ -114,6 +114,9 @@ impl<'a, D> Read for DigestReader<'a, D>
 
 #[cfg(test)]
 mod tests {
+    extern crate base64;
+    extern crate postgres;
+
     use super::*;
     use sha2::{Digest, Sha256};
 
@@ -134,5 +137,43 @@ mod tests {
         let mut hasher = Sha256::new();
         hasher.input(data);
         assert_eq!(hash[..], hasher.result()[..]);
+    }
+
+    #[test]
+    fn receive_vec_or_file() {
+        let conn = postgres::Connection::connect("postgresql://postgres@localhost/postgres",
+                                                 postgres::TlsMode::None)
+            .unwrap();
+        conn.execute("CREATE DATABASE src_receive_tests_receive", &[]).unwrap();
+
+        let conn = postgres::Connection::connect("postgresql:\
+                                                  //postgres@localhost/src_receive_tests_receive",
+                                                 postgres::TlsMode::None)
+            .unwrap();
+        conn.batch_execute(include_str!("../tests/clean_data.sql")).unwrap();
+
+        // keep object in memory
+        let mut lo = Lo::new(base64::decode("43fe96d43c21d1f86780f47b28fe24f142c395d9").unwrap(),
+                             198485881,
+                             6842,
+                             "text/test".to_string());
+        let data = lo.retrieve_lo_data::<Sha256>(&conn, 6842).unwrap();
+        assert!(if let Data::Vector(_) = *data {
+            true
+        } else {
+            false
+        });
+
+        // keep object in temporary file
+        let mut lo = Lo::new(base64::decode("43fe96d43c21d1f86780f47b28fe24f142c395d9").unwrap(),
+                             198485881,
+                             6842,
+                             "text/test".to_string());
+        let data = lo.retrieve_lo_data::<Sha256>(&conn, 6483).unwrap();
+        assert!(if let Data::File(_) = *data {
+            true
+        } else {
+            false
+        });
     }
 }

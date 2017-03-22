@@ -9,8 +9,15 @@ use aws_sdk_rust::aws::s3::s3client::S3Client;
 use hyper::{Client, Url};
 
 /// create connection to Postgres
-pub fn postgres_conn() -> postgres::Connection {
-    postgres::Connection::connect("postgresql://postgres@localhost", postgres::TlsMode::None)
+pub fn postgres_conn(db_name: &str) -> postgres::Connection {
+    let create_conn = postgres::Connection::connect(format!("postgresql:\
+                                                             //postgres@localhost/postgres"),
+                                                    postgres::TlsMode::None)
+        .unwrap();
+    create_conn.execute(&format!("CREATE DATABASE {}", db_name), &[]).unwrap();
+
+    postgres::Connection::connect(format!("postgresql://postgres@localhost/{}", db_name),
+                                  postgres::TlsMode::None)
         .unwrap()
 }
 
