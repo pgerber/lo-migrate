@@ -136,7 +136,7 @@ mod tests {
         stat.cancel();
         match stat.cancellation_point().unwrap_err() {
             MigrationError::ThreadCancelled => (),
-            _ => panic!()
+            _ => panic!(),
         }
     }
 

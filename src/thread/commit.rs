@@ -29,7 +29,7 @@ impl<'a> Committer<'a> {
         let mut lo_chunk = Vec::with_capacity(chunk_size);
 
         loop {
-            self.receive_next_chunk(&rx, &mut lo_chunk, chunk_size);
+            Self::receive_next_chunk(&rx, &mut lo_chunk, chunk_size);
 
             // commit sha2 hash to DB
             commit::commit(self.conn, &lo_chunk)?;
@@ -53,16 +53,45 @@ impl<'a> Committer<'a> {
         Ok(())
     }
 
-    pub fn receive_next_chunk(&self,
-                              rx: &Receiver<Lo>,
-                              lo_chunk: &mut Vec<Lo>,
-                              chunk_size: usize) {
+    fn receive_next_chunk(rx: &Receiver<Lo>, lo_chunk: &mut Vec<Lo>, chunk_size: usize) {
         while let Ok(lo) = rx.recv() {
             lo_chunk.push(lo);
 
             if lo_chunk.len() >= chunk_size {
                 break;
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::thread;
+    use two_lock_queue::{self, Sender};
+
+    #[test]
+    fn receive_next_chunk() {
+        let (tx, rx) = two_lock_queue::channel(5);
+        thread::spawn(move || { send_objects(tx, 12); });
+
+        let mut buffer = Vec::with_capacity(12);
+        Committer::receive_next_chunk(&rx, &mut buffer, 10);
+        assert!(buffer.iter().map(|i| i.size()).eq(0..10));
+
+        buffer.clear();
+        Committer::receive_next_chunk(&rx, &mut buffer, 10);
+        assert!(buffer.iter().map(|i| i.size()).eq(10..12));
+
+        buffer.clear();
+        Committer::receive_next_chunk(&rx, &mut buffer, 10);
+        assert!(buffer.is_empty());
+    }
+
+    fn send_objects(tx: Sender<Lo>, count: i64) {
+        for i in 0..count {
+            let lo = Lo::new(vec![], 0, i, "octet/stream".to_string());
+            tx.send(lo).unwrap();
         }
     }
 }
