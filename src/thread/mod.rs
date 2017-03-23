@@ -124,3 +124,55 @@ impl ThreadStat {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cancellation_point() {
+        let stat = ThreadStat::new();
+        assert!(stat.cancellation_point().is_ok());
+        stat.cancel();
+        match stat.cancellation_point().unwrap_err() {
+            MigrationError::ThreadCancelled => (),
+            _ => panic!()
+        }
+    }
+
+    #[test]
+    fn is_cancelled() {
+        let stat = ThreadStat::new();
+        assert!(!stat.is_cancelled());
+        stat.cancel();
+        assert!(stat.is_cancelled());
+    }
+
+    #[test]
+    fn clone() {
+        let stat1 = ThreadStat::new();
+        let stat2 = stat1.clone();
+
+        stat2.cancel();
+        assert!(stat1.is_cancelled());
+
+        let instant = Some(Instant::now());
+        *stat1.start.lock() = instant;
+        assert_eq!(instant, *stat2.start.lock());
+
+        stat1.lo_observed.fetch_add(252, Ordering::Relaxed);
+        assert_eq!(stat2.lo_observed(), 252);
+
+        stat2.lo_received.fetch_add(2, Ordering::Relaxed);
+        assert_eq!(stat1.lo_received(), 2);
+
+        stat1.lo_stored.fetch_add(159, Ordering::Relaxed);
+        assert_eq!(stat2.lo_stored(), 159);
+
+        stat2.lo_committed.fetch_add(2, Ordering::Relaxed);
+        assert_eq!(stat1.lo_committed(), 2);
+
+        *stat1.lo_total.lock() = Some(66);
+        assert_eq!(stat2.lo_total(), Some(66));
+    }
+}
