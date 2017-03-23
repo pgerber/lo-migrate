@@ -168,3 +168,66 @@ impl fmt::Debug for Lo {
             .finish()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const DATA: [u8; 13] = [b'b'; 13];
+    const SHA1: [u8; 20] = [233, 215, 31, 94, 231, 201, 45, 109, 201, 233, 47, 253, 173, 23, 184,
+                            189, 73, 65, 143, 152];
+    const SHA1_HEX: &str = "e9d71f5ee7c92d6dc9e92ffdad17b8bd49418f98";
+    const SHA2: [u8; 32] = [62, 35, 232, 22, 0, 57, 89, 74, 51, 137, 79, 101, 100, 225, 177, 52,
+                            139, 189, 122, 0, 136, 212, 44, 74, 203, 115, 238, 174, 213, 156, 0,
+                            157];
+    const SHA2_B64: &str = "PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0=";
+
+    #[test]
+    fn initial_state() {
+        let lo = Lo::new(SHA1[..].into(), 82, 159, "text/plain".to_string());
+        assert_eq!(lo.sha1(), &SHA1);
+        assert_eq!(lo.sha1_hex(), SHA1_HEX);
+        assert_eq!(lo.oid(), 82);
+        assert_eq!(lo.size(), 159);
+        assert_eq!(lo.mime_type(), "text/plain");
+    }
+
+    #[test]
+    fn sha2_unset() {
+        let lo = Lo::new(SHA1[..].into(), 82, 159, "text/plain".to_string());
+        assert_eq!(lo.sha2(), None);
+        assert_eq!(lo.sha2_base64(), None);
+    }
+
+    #[test]
+    fn sha2_set() {
+        let mut lo = Lo::new(SHA1[..].into(), 82, 159, "text/plain".to_string());
+        lo.set_sha2(SHA2[..].into());
+        assert_eq!(lo.sha2().unwrap(), &SHA2);
+        assert_eq!(lo.sha2_base64().unwrap(), SHA2_B64);
+    }
+
+    #[test]
+    fn set_data() {
+        let mut lo = Lo::new(SHA1[..].into(), 82, 159, "text/plain".to_string());
+        assert!(lo.lo_data().is_none());
+        lo.set_lo_data(Data::Vector(DATA[..].into()));
+        match *lo.lo_data() {
+            Data::Vector(ref v) => assert_eq!(v[..], DATA[..]),
+            _ => panic!(),
+        }
+        assert!(!lo.lo_data().is_none());
+    }
+
+    #[test]
+    fn take_data() {
+        let mut lo = Lo::new(SHA1[..].into(), 82, 159, "text/plain".to_string());
+        lo.set_lo_data(Data::Vector(DATA[..].into()));
+        assert!(!lo.lo_data().is_none());
+        match lo.take_lo_data() {
+            Data::Vector(ref v) => assert_eq!(v[..], DATA[..]),
+            _ => panic!(),
+        }
+        assert!(lo.lo_data().is_none());
+    }
+}
