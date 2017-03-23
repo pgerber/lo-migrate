@@ -11,8 +11,7 @@ use hyper::{Client, Url};
 /// create connection to Postgres
 #[cfg(feature = "postgres_tests")]
 pub fn postgres_conn(db_name: &str) -> postgres::Connection {
-    let create_conn = postgres::Connection::connect(format!("postgresql:\
-                                                             //postgres@localhost/postgres"),
+    let create_conn = postgres::Connection::connect("postgresql://postgres@localhost/postgres",
                                                     postgres::TlsMode::None)
         .unwrap();
     create_conn.execute(&format!("CREATE DATABASE {}", db_name), &[]).unwrap();
