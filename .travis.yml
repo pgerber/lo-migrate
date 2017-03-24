@@ -6,7 +6,7 @@ rust:
   # - beta
   # - stable
 before_install:
-  - docker run -d -e CEPH_DEMO_ACCESS_KEY=access_key -e CEPH_DEMO_SECRET_KEY=secret_key -e CEPH_DEMO_BUCKET=test_bucket -e CEPH_DEMO_UID=demo_uid  -e MON_IP=127.0.0.1 -e CEPH_PUBLIC_NETWORK=0.0.0.0/0 -p 8080:80 ceph/demo
+  - docker run -d -e CEPH_DEMO_ACCESS_KEY=access_key -e CEPH_DEMO_SECRET_KEY=secret_key -e CEPH_DEMO_UID=demo_uid  -e MON_IP=127.0.0.1 -e CEPH_PUBLIC_NETWORK=0.0.0.0/0 -p 8080:80 ceph/demo
   - docker run -d -p 5432 postgres
   - while ! wget -S --spider http://localhost:8080 -S --spider http://localhost:8080; do sleep 1; done
   - while ! pg_isready -h localhost; do sleep 1; done
@@ -14,6 +14,7 @@ script:
   - cargo rustc --features clippy --lib -- -D warnings
   - cargo rustc --features clippy --bin lo_migrate_cli -- -D warnings
   - cargo test --no-fail-fast --features travis_tests
+  - cargo test --no-fail-fast --no-default-features --features "travis_tests integer_atomics"
 services:
   - docker
 # matrix:

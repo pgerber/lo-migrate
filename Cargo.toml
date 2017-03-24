@@ -38,7 +38,10 @@ regex = "0.2"
 travis_tests = ["postgres_tests", "s3_tests"]
 postgres_tests = []
 s3_tests = []
-default = []
+try_from = []
+integer_atomics = []
+unstable = ["try_from", "integer_atomics"]
+default = ["unstable"]
 
 [[bin]]
 name = "lo_migrate_cli"

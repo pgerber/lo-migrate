@@ -34,8 +34,8 @@ const MIME_TYPES: [&str; 5] = ["", "octet/stream", "octet/stream", "text/plain",
 #[test]
 fn migration() {
     let stats = ThreadStat::new();
-    let pg_conn = postgres_conn("tests_successful_migration");
-    let s3_client = s3_conn();
+    let pg_conn = postgres_conn();
+    let (s3_client, bucket_name) = s3_conn();
 
     // create database
     pg_conn.batch_execute(include_str!("clean_data.sql")).unwrap();
@@ -55,10 +55,7 @@ fn migration() {
     // store objects to S3
     let (cmt_tx, cmt_rx) = queue::unbounded();
     let storer = Storer::new(&stats);
-    storer.start_worker(Arc::new(str_rx),
-                      Arc::new(cmt_tx),
-                      &s3_client,
-                      "test_bucket")
+    storer.start_worker(Arc::new(str_rx), Arc::new(cmt_tx), &s3_client, &bucket_name)
         .unwrap();
     assert_eq!(extract_stats(&stats), (Some(5), 5, 5, 5, 0));
 
@@ -79,15 +76,16 @@ fn migration() {
 
     // verify S3 bucket content
     for (sha256, mime_type) in SHA256_HASHES.iter().zip(&MIME_TYPES) {
-        assert_object_in_store(&s3_client, sha256, mime_type);
+        assert_object_in_store(&s3_client, &bucket_name, sha256, mime_type);
     }
 }
 
 fn assert_object_in_store(client: &S3Client<ParametersProvider, Client>,
+                          bucket_name: &str,
                           expected_sha256: &str,
                           mime: &str) {
     let request = GetObjectRequest {
-        bucket: "test_bucket".to_string(),
+        bucket: bucket_name.to_string(),
         key: expected_sha256.to_string(),
         ..Default::default()
     };

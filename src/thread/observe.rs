@@ -8,7 +8,6 @@ use postgres::rows::Row;
 use postgres::transaction::Transaction;
 use postgres::types::Oid;
 use serialize::hex::FromHex;
-use std::convert::TryFrom;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Instant;
@@ -65,7 +64,9 @@ impl<'a> Observer<'a> {
                     AND hash ~ '^[0-9A-Fa-f]{40}$'",
                    &[])?;
         let count: i64 = rows.get(0).get(0);
-        Ok(u64::try_from(count).expect("count should not be negative"))
+
+        #[cfg_attr(feature = "clippy", allow(cast_sign_loss))]
+        Ok(count as u64)
     }
 
     /// add [`Lo`] to receiver queue

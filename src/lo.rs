@@ -3,8 +3,6 @@
 use postgres::types::Oid;
 use std::fmt;
 use std::mem;
-#[cfg(feature = "try_from")]
-use std::convert::TryInto;
 use serialize::hex::ToHex;
 use mktemp::Temp;
 use base64;

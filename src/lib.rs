@@ -10,8 +10,8 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 
-#![feature(try_from)]
-#![feature(integer_atomics)]
+#![cfg_attr(feature = "try_from", feature(try_from))]
+#![cfg_attr(feature = "integer_atomics", feature(integer_atomics))]
 
 #![deny(unused_must_use)]
 #![deny(const_err)]

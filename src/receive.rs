@@ -6,6 +6,8 @@ use mktemp::Temp;
 use postgres::Connection;
 use postgres_large_object::{LargeObjectTransactionExt, Mode};
 use digest::Digest;
+#[cfg(feature = "try_from")]
+use std::convert::TryInto;
 use std::fs;
 use std::io;
 use std::io::Read;
@@ -41,7 +43,7 @@ impl Lo {
         let (data, size) = if self.size() <= size_threshold {
             // keep binary data in memory
             #[cfg(feature = "try_from")]
-            let size = self.size().try_into().unwrap();
+            let size = self.size().try_into().expect("size limit exceeded");
 
             #[cfg(not(feature = "try_from"))]
             #[allow(cast_possible_truncation)]
@@ -116,8 +118,10 @@ impl<'a, D> Read for DigestReader<'a, D>
 mod tests {
     extern crate base64;
     extern crate postgres;
+    extern crate rand;
 
     use super::*;
+    use self::rand::Rng;
     use sha2::{Digest, Sha256};
 
     #[test]
@@ -142,13 +146,16 @@ mod tests {
     #[test]
     #[cfg(feature = "postgres_tests")]
     fn receive_vec_or_file() {
+        let db_name: String = rand::thread_rng().gen_ascii_chars().take(63).collect();
+
         let conn = postgres::Connection::connect("postgresql://postgres@localhost/postgres",
                                                  postgres::TlsMode::None)
             .unwrap();
-        conn.execute("CREATE DATABASE src_receive_tests_receive", &[]).unwrap();
+        conn.batch_execute(&format!("CREATE DATABASE \"{}\";", db_name))
+            .unwrap();
 
-        let conn = postgres::Connection::connect("postgresql:\
-                                                  //postgres@localhost/src_receive_tests_receive",
+        let conn = postgres::Connection::connect(format!("postgresql://postgres@localhost/{}",
+                                                         db_name),
                                                  postgres::TlsMode::None)
             .unwrap();
         conn.batch_execute(include_str!("../tests/clean_data.sql")).unwrap();
