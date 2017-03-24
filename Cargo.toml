@@ -11,8 +11,8 @@ fallible-iterator = "*"
 sha1 = { version = "*", git = "https://github.com/RustCrypto/hashes" }
 sha2 = "*"
 spin = "*"
-postgres = "0.13.0"
-postgres_large_object = "0.5.1"
+postgres = { version = "0.13", features = ["with-native-tls"] }
+postgres_large_object = "0.5"
 aws-sdk-rust = "*"
 rustc-serialize = "*"
 two-lock-queue = "*"
