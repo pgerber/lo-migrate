@@ -9,6 +9,7 @@
 
 use chrono;
 use lo::Lo;
+use std::io;
 use std::sync::atomic::Ordering;
 use std::thread;
 use std::sync::Weak;
@@ -111,22 +112,26 @@ impl<'a> Monitor<'a> {
             println!();
 
             println!("Processed Objects by Thread Groups:");
-            Self::print_thread_stats("observer thread",
+            Self::print_thread_stats(&mut io::stdout(),
+                                     "observer thread",
                                      before.lo_observed,
                                      now.lo_observed,
                                      now.difference,
                                      now.duration);
-            Self::print_thread_stats("receiver threads",
+            Self::print_thread_stats(&mut io::stdout(),
+                                     "receiver threads",
                                      before.lo_received,
                                      now.lo_received,
                                      now.difference,
                                      now.duration);
-            Self::print_thread_stats("storer threads",
+            Self::print_thread_stats(&mut io::stdout(),
+                                     "storer threads",
                                      before.lo_stored,
                                      now.lo_stored,
                                      now.difference,
                                      now.duration);
-            Self::print_thread_stats("committer threads",
+            Self::print_thread_stats(&mut io::stdout(),
+                                     "committer threads",
                                      before.lo_committed,
                                      now.lo_committed,
                                      now.difference,
@@ -134,15 +139,18 @@ impl<'a> Monitor<'a> {
             println!();
 
             println!("Queue Usage:");
-            Self::print_queue_stats("receive queue",
+            Self::print_queue_stats(&mut io::stdout(),
+                                    "receive queue",
                                     before.lo_received_queue_len,
                                     now.lo_received_queue_len,
                                     self.receive_queue_size);
-            Self::print_queue_stats("store queue",
+            Self::print_queue_stats(&mut io::stdout(),
+                                    "store queue",
                                     before.lo_stored_queue_len,
                                     now.lo_stored_queue_len,
                                     self.store_queue_size);
-            Self::print_queue_stats("commit queue",
+            Self::print_queue_stats(&mut io::stdout(),
+                                    "commit queue",
                                     before.lo_committed_queue_len,
                                     now.lo_committed_queue_len,
                                     self.commit_queue_size);
@@ -192,17 +200,23 @@ impl<'a> Monitor<'a> {
         }
     }
 
-    fn print_queue_stats(queue_name: &str, used_last: usize, used_now: usize, size: usize) {
+    fn print_queue_stats(f: &mut io::Write,
+                         queue_name: &str,
+                         used_last: usize,
+                         used_now: usize,
+                         size: usize) {
         let percentage = used_now as f32 / size as f32 * 100_f32;
-        println!("    {:17} - used {:6} of {:6}, {:6.2}% full, changed by: {:+6}",
-                 queue_name,
-                 used_now,
-                 size,
-                 percentage,
-                 used_now as i64 - used_last as i64)
+        let _ = writeln!(f,
+                         "    {:17} - used {:6} of {:6}, {:6.2}% full, changed by: {:+6}",
+                         queue_name,
+                         used_now,
+                         size,
+                         percentage,
+                         used_now as i64 - used_last as i64);
     }
 
-    fn print_thread_stats(thread_name: &str,
+    fn print_thread_stats(f: &mut io::Write,
+                          thread_name: &str,
                           seen_last: u64,
                           seen_now: u64,
                           difference: Duration,
@@ -218,17 +232,19 @@ impl<'a> Monitor<'a> {
                                 difference.subsec_nanos() as f32 / 1_000_000_000_f32;
             let diff_speed = (seen_now - seen_last) as f32 / diff_duration;
 
-            println!("    {:17} - processed: {:7}, current speed: {:7.1} Lo/s, average speed: \
-                      {:7.1} Lo/s",
-                     thread_name,
-                     seen_now,
-                     diff_speed,
-                     avg_speed);
+            let _ = writeln!(f,
+                             "    {:17} - processed: {:7}, current speed: {:7.1} Lo/s, average \
+                              speed: {:7.1} Lo/s",
+                             thread_name,
+                             seen_now,
+                             diff_speed,
+                             avg_speed);
         } else {
-            println!("    {:17} - processed: {:7}, current speed: UNKNOWN Lo/s, average speed: \
-                      UNKNOWN Lo/s",
-                     thread_name,
-                     seen_now);
+            let _ = writeln!(f,
+                             "    {:17} - processed: {:7}, current speed: UNKNOWN Lo/s, average \
+                              speed: UNKNOWN Lo/s",
+                             thread_name,
+                             seen_now);
         }
     }
 
@@ -245,5 +261,109 @@ impl<'a> Monitor<'a> {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    extern crate regex;
+
+    use super::*;
+    use self::regex::Regex;
+
+    #[test]
+    fn progress() {
+        assert_eq!(Monitor::progress(50, None), "UNKNOWN");
+        assert_eq!(Monitor::progress(50, Some(200)), "25.00%");
+        assert_eq!(Monitor::progress(0, Some(200)), "0.00%");
+        assert_eq!(Monitor::progress(2482, Some(2482)), "100.00%");
+    }
+
+    #[test]
+    fn calculate_eta() {
+        // zero committed
+        assert_eq!(Monitor::calculate_eta(0, Some(1234), Some(Duration::from_secs(120))),
+                   "UNKNOWN");
+
+        // total None
+        assert_eq!(Monitor::calculate_eta(1542, None, Some(Duration::from_secs(120))),
+                   "UNKNOWN");
+
+        // Duration None
+        assert_eq!(Monitor::calculate_eta(154, Some(1234), None), "UNKNOWN");
+
+        // Duration Zero
+        assert_eq!(Monitor::calculate_eta(154, Some(1234), Some(Default::default())),
+                   "UNKNOWN");
+
+        // in progress
+        //
+        // duration: 10 (rounded down)
+        // finished: 1630
+        // total: 598985
+        // speed: 163 objects/s (finished / duration)
+        //
+        // total duration: 3674 secs (total / speed)
+        // left = 3664 (total duration - duration) => 1h 01m 04s
+        let re = Regex::new(r"^20\d\d-\d\d-\d\d \d\d:\d\d:\d\d \(1h 01m 04s\)$").unwrap();
+        assert!(re.is_match(&Monitor::calculate_eta(1630,
+                                                    Some(598985),
+                                                    Some(Duration::new(10, 500_000_000)))));
+    }
+
+    #[test]
+    fn print_queue_stats() {
+        // more in queue
+        let mut output = vec![];
+        Monitor::print_queue_stats(&mut output, "receiver queue", 50, 112, 4096);
+        assert_eq!(String::from_utf8(output).unwrap(),
+                   "    receiver queue    - used    112 of   4096,   2.73% full, changed by:    \
+                    +62\n");
+
+        // less in queue
+        let mut output = vec![];
+        Monitor::print_queue_stats(&mut output, "receiver queue", 4096, 2048, 4096);
+        assert_eq!(String::from_utf8(output).unwrap(),
+                   "    receiver queue    - used   2048 of   4096,  50.00% full, changed by:  \
+                    -2048\n");
+    }
+
+    #[test]
+    fn print_thread_stats() {
+        // total duration available
+        let mut output = vec![];
+        Monitor::print_thread_stats(&mut output,
+                                    "receiver thread",
+                                    500,
+                                    650,
+                                    Duration::new(3, 300_000_000),
+                                    Some(Duration::new(15, 600_000_000)));
+        assert_eq!(String::from_utf8(output).unwrap(),
+                   "    receiver thread   - processed:     650, current speed:    45.5 Lo/s, \
+                    average speed:    41.7 Lo/s\n");
+
+        // total duration unavailable
+        let mut output = vec![];
+        Monitor::print_thread_stats(&mut output,
+                                    "receiver thread",
+                                    0,
+                                    0,
+                                    Duration::new(3, 300_000_000),
+                                    None);
+        assert_eq!(String::from_utf8(output).unwrap(),
+                   "    receiver thread   - processed:       0, current speed: UNKNOWN Lo/s, \
+                    average speed: UNKNOWN Lo/s\n");
+
+        // total duration zero
+        let mut output = vec![];
+        Monitor::print_thread_stats(&mut output,
+                                    "receiver thread",
+                                    0,
+                                    0,
+                                    Duration::new(3, 300_000_000),
+                                    Default::default());
+        assert_eq!(String::from_utf8(output).unwrap(),
+                   "    receiver thread   - processed:       0, current speed: UNKNOWN Lo/s, \
+                    average speed: UNKNOWN Lo/s\n");
     }
 }

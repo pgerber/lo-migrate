@@ -1,4 +1,5 @@
 extern crate lo_migrate;
+extern crate rand;
 extern crate two_lock_queue as queue;
 
 use lo_migrate::Lo;
@@ -7,20 +8,20 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use std::thread::{self, JoinHandle};
 use queue::Receiver;
-
-type Receivers = (Option<Arc<Receiver<Lo>>>, Option<Arc<Receiver<Lo>>>, Option<Arc<Receiver<Lo>>>);
+use rand::Rng;
 
 #[test]
 fn queues_hang_up() {
-    let (handle, mut rx, stats) = start_monitor(86400);
+    let (handle, mut rxes, stats) = start_monitor(86400);
     let start = Instant::now();
     thread::spawn(move || {
-        thread::sleep(Duration::from_secs(1));
-        drop(rx.0.take()); // hang up first queue
-        thread::sleep(Duration::from_secs(1));
-        drop(rx.1.take()); // hang up second queue
-        thread::sleep(Duration::from_secs(1));
-        // hang up third queue
+        let mut rng = rand::thread_rng();
+        rng.shuffle(&mut rxes);
+        for _rx in rxes {
+            thread::sleep(Duration::from_secs(1));
+            // _rx is dropped here (Only once when last `Receiver` is dropped the `Monitor`
+            // thread must exit.)
+        }
     });
     handle.join().unwrap();
     assert!(start.elapsed() >= Duration::from_secs(3));
@@ -29,7 +30,7 @@ fn queues_hang_up() {
 
 #[test]
 fn cancelled() {
-    let (handle, _rx, stats) = start_monitor(1);
+    let (handle, _rxes, stats) = start_monitor(1);
     let start = Instant::now();
     let stats_thread = stats.clone();
     thread::spawn(move || {
@@ -41,7 +42,7 @@ fn cancelled() {
     assert!(stats.is_cancelled());
 }
 
-fn start_monitor(secs: u64) -> (JoinHandle<()>, Receivers, ThreadStat) {
+fn start_monitor(secs: u64) -> (JoinHandle<()>, Vec<Arc<Receiver<Lo>>>, ThreadStat) {
     let (_, rx1) = queue::unbounded();
     let rx1 = Arc::new(rx1);
     let (_, rx2) = queue::unbounded();
@@ -66,5 +67,5 @@ fn start_monitor(secs: u64) -> (JoinHandle<()>, Receivers, ThreadStat) {
         };
         monitor.start_worker(Duration::from_secs(secs));
     });
-    (handle, (Some(rx1), Some(rx2), Some(rx3)), stats)
+    (handle, vec![rx1, rx2, rx3], stats)
 }
