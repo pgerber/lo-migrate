@@ -13,7 +13,6 @@ extern crate two_lock_queue;
 extern crate hyper_rustls;
 
 use postgres::{Connection, TlsMode};
-use postgres::tls::native_tls::NativeTls;
 use url::Url;
 use aws_sdk_rust::aws::s3::s3client::S3Client;
 use aws_sdk_rust::aws::s3::endpoint::Endpoint;
@@ -188,8 +187,7 @@ impl fmt::Display for Args {
 fn connect_to_postgres(url: &str, count: usize) -> Vec<Connection> {
     let mut conns = Vec::with_capacity(count);
     for _ in 0..count {
-        let negotiator = NativeTls::new().unwrap();
-        conns.push(Connection::connect(url, TlsMode::Prefer(&negotiator))
+        conns.push(Connection::connect(url, TlsMode::None)
             .expect("Failed to connect to Postgres server"));
     }
     conns
