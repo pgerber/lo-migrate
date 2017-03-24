@@ -69,7 +69,7 @@ fn migration() {
 
     // verify sha256 hashes
     let sha2_hashes: Vec<String> = pg_conn.query("SELECT sha2 FROM _nice_binary WHERE sha2 <> \
-                '0000000000000000000000000000000000000000000=' ORDER BY data",
+                '0000000000000000000000000000000000000000000=' AND sha2 IS NOT NULL ORDER BY data",
                &[])
         .unwrap()
         .iter()

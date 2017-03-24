@@ -20,11 +20,20 @@ INSERT INTO _nice_binary (hash, size, mime_type, data, sha2)
 VALUES
     ('43fe96d43c21d1f86780f47b28fe24f142c395d9', 6842, '',             198485881, null),
     ('8bacf7b5aeb31e6d278598d4be2b263c8d53e862',  125, 'octet/stream', 198485882, null),
+
+        -- already migrated
     ('0000000000000000000000000000000000000000',   44, 'unused',               0,
                                                  '0000000000000000000000000000000000000000000='),
     ('da39a3ee5e6b4b0d3255bfef95601890afd80709',    0, 'octet/stream', 198485883, null),
     ('4694849b7ceeae0e5254689ff1f352735581d6ec',   12, 'text/plain',   198485884, null),
-    ('d0706a2d42b415eaf546865acf6287fc8ac1f0e5',   81, 'octet/stream', 198485885, null);
+
+        -- hash to short
+    ('392007d934dd54600110b683f5e52aeeedb1',  125, 'octet/stream', 198485882, null),
+
+    ('d0706a2d42b415eaf546865acf6287fc8ac1f0e5',   81, 'octet/stream', 198485885, null),
+
+        -- invalid hash (not hex)
+    ('d0706a2d42b415eaX546865acf6287fc8ac1f0e5',   81, 'octet/stream', 198485885, null);
 
 BEGIN;
 

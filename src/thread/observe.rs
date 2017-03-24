@@ -46,9 +46,6 @@ impl<'a> Observer<'a> {
         for row in rows.iterator() {
             self.queue(&tx, row?)?;
 
-            // count received objects
-            self.stats.lo_observed.fetch_add(1, Ordering::Relaxed);
-
             // thread cancellation point
             self.stats.cancellation_point()?;
         }
@@ -63,7 +60,10 @@ impl<'a> Observer<'a> {
     ///       same transaction as retrieving the rows to be correct.
     fn count_objects(&self, _tx: &Transaction) -> Result<u64> {
         info!("counting large objects");
-        let rows = self.conn.query("SELECT count(*) FROM _nice_binary where sha2 is NULL", &[])?;
+        let rows = self.conn
+            .query("SELECT count(*) FROM _nice_binary where sha2 is NULL \
+                    AND hash ~ '^[0-9A-Fa-f]{40}$'",
+                   &[])?;
         let count: i64 = rows.get(0).get(0);
         Ok(u64::try_from(count).expect("count should not be negative"))
     }
@@ -76,13 +76,24 @@ impl<'a> Observer<'a> {
         let size: i64 = row.get(2);
         let mime_type: String = row.get(3);
 
-        if let Ok(sha1) = sha1 {
-            let lo = Lo::new(sha1, oid, size, mime_type);
-            debug!("adding Lo to queue: {:?}", lo);
-            tx.send(lo)?;
-        } else {
-            warn!("encountered _nice_binary entry with invalid hash {:?}",
-                  sha1_hex)
+        match sha1 {
+            Ok(ref sha1) if sha1.len() != 20 => {
+                warn!("encountered _nice_binary entry with invalid hash {:?}: incorrect length",
+                      sha1_hex)
+            }
+            Err(e) => {
+                warn!("encountered _nice_binary entry with invalid hash {:?}: {}",
+                      sha1_hex,
+                      e)
+            }
+            Ok(sha1) => {
+                let lo = Lo::new(sha1, oid, size, mime_type);
+                debug!("adding Lo to queue: {:?}", lo);
+                tx.send(lo)?;
+
+                // count received objects
+                self.stats.lo_observed.fetch_add(1, Ordering::Relaxed);
+            }
         }
         Ok(())
     }
