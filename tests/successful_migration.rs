@@ -18,7 +18,7 @@ use aws_sdk_rust::aws::s3::s3client::S3Client;
 use hyper::Client;
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
-use lo_migrate::thread::{Committer, Observer, Storer, Receiver, ThreadStat};
+use lo_migrate::thread::{Committer, Counter, Observer, Storer, Receiver, ThreadStat};
 
 // sha256 hashes of clean_data.sql sorted by OID (DB column data)
 const SHA256_HASHES: [&str; 5] = ["uAGE/a7gZcsx4fJBe7FEEs64Gc9XpGJG7FtPjale8mg=",
@@ -39,6 +39,11 @@ fn migration() {
 
     // create database
     pg_conn.batch_execute(include_str!("clean_data.sql")).unwrap();
+
+    // count large objects
+    let counter = Counter::new(&stats, &pg_conn);
+    counter.start_worker().unwrap();
+    assert_eq!(extract_stats(&stats), (Some(5), 0, 0, 0, 0));
 
     // get list of large objects
     let (rcv_tx, rcv_rx) = queue::unbounded();

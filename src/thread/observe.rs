@@ -5,12 +5,10 @@
 use fallible_iterator::FallibleIterator;
 use postgres::Connection;
 use postgres::rows::Row;
-use postgres::transaction::Transaction;
 use postgres::types::Oid;
 use serialize::hex::FromHex;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::time::Instant;
 use two_lock_queue::Sender;
 
 use error::Result;
@@ -32,13 +30,6 @@ impl<'a> Observer<'a> {
     pub fn start_worker(&self, tx: Arc<Sender<Lo>>, buffer_size: i32) -> Result<()> {
         let trx = self.conn.transaction()?;
 
-        // count Large Objects
-        let count = Some(self.count_objects(&trx)?);
-        *self.stats.lo_total.lock() = count;
-
-        // set migration/transfer start time
-        *self.stats.start.lock() = Some(Instant::now());
-
         let stmt = self.conn
             .prepare("SELECT hash, data, size, mime_type FROM _nice_binary where sha2 is NULL")?;
         let rows = stmt.lazy_query(&trx, &[], buffer_size)?;
@@ -51,22 +42,6 @@ impl<'a> Observer<'a> {
 
         info!("thread has completed its mission");
         Ok(())
-    }
-
-    /// count large object in database that still need to be moved to S3
-    ///
-    /// note: we pass in the transaction to be sure that the count is correct; Count must occur in
-    ///       same transaction as retrieving the rows to be correct.
-    fn count_objects(&self, _tx: &Transaction) -> Result<u64> {
-        info!("counting large objects");
-        let rows = self.conn
-            .query("SELECT count(*) FROM _nice_binary where sha2 is NULL \
-                    AND hash ~ '^[0-9A-Fa-f]{40}$'",
-                   &[])?;
-        let count: i64 = rows.get(0).get(0);
-
-        #[cfg_attr(feature = "clippy", allow(cast_sign_loss))]
-        Ok(count as u64)
     }
 
     /// add [`Lo`] to receiver queue

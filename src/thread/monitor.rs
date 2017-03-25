@@ -23,7 +23,7 @@ use two_lock_queue::Receiver;
 struct Stats {
     instant: Instant,
     difference: Duration,
-    duration: Option<Duration>,
+    duration: Duration,
 
     // processed `Lo`s
     lo_observed: u64,
@@ -42,7 +42,7 @@ impl Default for Stats {
         Stats {
             instant: Instant::now(),
             difference: Default::default(),
-            duration: None,
+            duration: Default::default(),
             lo_observed: 0,
             lo_received: 0,
             lo_stored: 0,
@@ -67,7 +67,7 @@ pub struct Monitor<'a> {
 impl<'a> Monitor<'a> {
     pub fn start_worker(&self, interval: Duration) {
         let cancel_interval = Duration::from_secs(1);
-        let mut start_instant = None;
+        let start_instant = Instant::now();
         let mut before: Stats = Default::default();
         let mut total = None;
 
@@ -77,17 +77,12 @@ impl<'a> Monitor<'a> {
                 total = *self.stats.lo_total.lock();
             }
 
-            if start_instant.is_none() {
-                // only fetch total once to avoid locking
-                start_instant = *self.stats.start.lock();
-            }
-
             let now = Stats {
                 instant: Instant::now(),
                 // time passed since last loop
                 difference: before.instant.elapsed(),
                 // time passed since start
-                duration: start_instant.map_or(None, |i| Some(i.elapsed())),
+                duration: start_instant.elapsed(),
                 lo_observed: self.stats.lo_observed.load(Ordering::Relaxed),
                 lo_received: self.stats.lo_received.load(Ordering::Relaxed),
                 lo_stored: self.stats.lo_stored.load(Ordering::Relaxed),
@@ -182,8 +177,8 @@ impl<'a> Monitor<'a> {
         }
     }
 
-    fn calculate_eta(lo_committed: u64, total: Option<u64>, duration: Option<Duration>) -> String {
-        let secs = duration.map_or(0, |i| i.as_secs());
+    fn calculate_eta(lo_committed: u64, total: Option<u64>, duration: Duration) -> String {
+        let secs = duration.as_secs();
         match total {
             Some(total) if lo_committed > 0 && secs > 0 => {
                 let eta_secs = (total as f32 / lo_committed as f32 * secs as f32 - secs as f32) as
@@ -220,32 +215,24 @@ impl<'a> Monitor<'a> {
                           seen_last: u64,
                           seen_now: u64,
                           difference: Duration,
-                          duration: Option<Duration>) {
-        if let Some(duration) = duration {
-            // since start
-            let avg_duration = duration.as_secs() as f32 +
-                               duration.subsec_nanos() as f32 / 1_000_000_000_f32;
-            let avg_speed = seen_now as f32 / avg_duration;
+                          duration: Duration) {
+        // since start
+        let avg_duration = duration.as_secs() as f32 +
+                           duration.subsec_nanos() as f32 / 1_000_000_000_f32;
+        let avg_speed = seen_now as f32 / avg_duration;
 
-            // since last status update
-            let diff_duration = difference.as_secs() as f32 +
-                                difference.subsec_nanos() as f32 / 1_000_000_000_f32;
-            let diff_speed = (seen_now - seen_last) as f32 / diff_duration;
+        // since last status update
+        let diff_duration = difference.as_secs() as f32 +
+                            difference.subsec_nanos() as f32 / 1_000_000_000_f32;
+        let diff_speed = (seen_now - seen_last) as f32 / diff_duration;
 
-            let _ = writeln!(f,
-                             "    {:17} - processed: {:7}, current speed: {:7.1} Lo/s, average \
-                              speed: {:7.1} Lo/s",
-                             thread_name,
-                             seen_now,
-                             diff_speed,
-                             avg_speed);
-        } else {
-            let _ = writeln!(f,
-                             "    {:17} - processed: {:7}, current speed: UNKNOWN Lo/s, average \
-                              speed: UNKNOWN Lo/s",
-                             thread_name,
-                             seen_now);
-        }
+        let _ = writeln!(f,
+                         "    {:17} - processed: {:7}, current speed: {:7.1} Lo/s, average \
+                          speed: {:7.1} Lo/s",
+                         thread_name,
+                         seen_now,
+                         diff_speed,
+                         avg_speed);
     }
 
     /// wait for `interval` but check every `cancel_interval` if thread should be cancelled
@@ -282,18 +269,15 @@ mod tests {
     #[test]
     fn calculate_eta() {
         // zero committed
-        assert_eq!(Monitor::calculate_eta(0, Some(1234), Some(Duration::from_secs(120))),
+        assert_eq!(Monitor::calculate_eta(0, Some(1234), Duration::from_secs(120)),
                    "UNKNOWN");
 
         // total None
-        assert_eq!(Monitor::calculate_eta(1542, None, Some(Duration::from_secs(120))),
+        assert_eq!(Monitor::calculate_eta(1542, None, Duration::from_secs(120)),
                    "UNKNOWN");
 
-        // Duration None
-        assert_eq!(Monitor::calculate_eta(154, Some(1234), None), "UNKNOWN");
-
         // Duration Zero
-        assert_eq!(Monitor::calculate_eta(154, Some(1234), Some(Default::default())),
+        assert_eq!(Monitor::calculate_eta(154, Some(1234), Default::default()),
                    "UNKNOWN");
 
         // in progress
@@ -308,7 +292,7 @@ mod tests {
         let re = Regex::new(r"^20\d\d-\d\d-\d\d \d\d:\d\d:\d\d \(1h 01m 04s\)$").unwrap();
         assert!(re.is_match(&Monitor::calculate_eta(1630,
                                                     Some(598985),
-                                                    Some(Duration::new(10, 500_000_000)))));
+                                                    Duration::new(10, 500_000_000))));
     }
 
     #[test]
@@ -337,33 +321,9 @@ mod tests {
                                     500,
                                     650,
                                     Duration::new(3, 300_000_000),
-                                    Some(Duration::new(15, 600_000_000)));
+                                    Duration::new(15, 600_000_000));
         assert_eq!(String::from_utf8(output).unwrap(),
                    "    receiver thread   - processed:     650, current speed:    45.5 Lo/s, \
                     average speed:    41.7 Lo/s\n");
-
-        // total duration unavailable
-        let mut output = vec![];
-        Monitor::print_thread_stats(&mut output,
-                                    "receiver thread",
-                                    0,
-                                    0,
-                                    Duration::new(3, 300_000_000),
-                                    None);
-        assert_eq!(String::from_utf8(output).unwrap(),
-                   "    receiver thread   - processed:       0, current speed: UNKNOWN Lo/s, \
-                    average speed: UNKNOWN Lo/s\n");
-
-        // total duration zero
-        let mut output = vec![];
-        Monitor::print_thread_stats(&mut output,
-                                    "receiver thread",
-                                    0,
-                                    0,
-                                    Duration::new(3, 300_000_000),
-                                    Default::default());
-        assert_eq!(String::from_utf8(output).unwrap(),
-                   "    receiver thread   - processed:       0, current speed: UNKNOWN Lo/s, \
-                    average speed: UNKNOWN Lo/s\n");
     }
 }

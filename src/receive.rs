@@ -121,7 +121,6 @@ mod tests {
     extern crate rand;
 
     use super::*;
-    use self::rand::Rng;
     use sha2::{Digest, Sha256};
 
     #[test]
@@ -146,6 +145,8 @@ mod tests {
     #[test]
     #[cfg(feature = "postgres_tests")]
     fn receive_vec_or_file() {
+        use self::rand::Rng;
+
         let db_name: String = rand::thread_rng().gen_ascii_chars().take(63).collect();
 
         let conn = postgres::Connection::connect("postgresql://postgres@localhost/postgres",

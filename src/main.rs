@@ -21,7 +21,7 @@ use aws_sdk_rust::aws::common::region::Region;
 use aws_sdk_rust::aws::common::credentials::ParametersProvider;
 use hyper::client::{self, Client, RedirectPolicy};
 use hyper::net::HttpsConnector;
-use lo_migrate::thread::{Committer, Monitor, Observer, Receiver, Storer, ThreadStat};
+use lo_migrate::thread::{Committer, Counter, Monitor, Observer, Receiver, Storer, ThreadStat};
 use sha2::Sha256;
 use std::fmt;
 use std::str::FromStr;
@@ -246,6 +246,8 @@ fn main() {
                                         &s3_endpoint,
                                         args.storer_threads);
     let committer_pg_conns = connect_to_postgres(&args.postgres_url, args.committer_threads);
+    let counter_pg_conns = connect_to_postgres(&args.postgres_url,
+                                               1 /* multiple threads not supperted */);
 
     let thread_stat = ThreadStat::new();
 
@@ -369,6 +371,19 @@ fn main() {
                 monitor.start_worker(Duration::from_secs(monitor_interval));
             })
             .unwrap());
+    }
+
+    // create counter thread
+    {
+        let thread_stat = thread_stat.clone();
+        let conn = counter_pg_conns.into_iter().next().unwrap();
+        thread::Builder::new()
+            .name("counter".to_string())
+            .spawn(move || {
+                let counter = Counter::new(&thread_stat, &conn);
+                counter.start_worker().unwrap();
+            })
+            .unwrap();
     }
 
     let mut failure_count = 0;

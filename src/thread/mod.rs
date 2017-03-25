@@ -3,6 +3,9 @@
 mod commit;
 pub use self::commit::Committer;
 
+mod count;
+pub use self::count::Counter;
+
 mod monitor;
 pub use self::monitor::Monitor;
 
@@ -19,7 +22,6 @@ use error::{MigrationError, Result};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::atomic::Ordering;
-use std::time::Instant;
 use lo::Lo;
 use spin;
 use postgres;
@@ -29,11 +31,6 @@ use postgres;
 pub struct ThreadStat {
     /// Used to implement cancellation points within the threads
     cancelled: Arc<AtomicBool>,
-
-    /// Start instant
-    ///
-    /// Contains the time when transfering was started. Set by the observer thread.
-    start: Arc<spin::Mutex<Option<Instant>>>,
 
     /// Total number of large object
     ///
@@ -72,7 +69,6 @@ impl ThreadStat {
     pub fn new() -> Self {
         ThreadStat {
             cancelled: Arc::new(AtomicBool::new(false)),
-            start: Arc::new(spin::Mutex::new(None)),
             lo_total: Arc::new(spin::Mutex::new(None)),
             lo_observed: Arc::new(AtomicU64::new(0)),
             lo_received: Arc::new(AtomicU64::new(0)),
@@ -155,10 +151,6 @@ mod tests {
 
         stat2.cancel();
         assert!(stat1.is_cancelled());
-
-        let instant = Some(Instant::now());
-        *stat1.start.lock() = instant;
-        assert_eq!(instant, *stat2.start.lock());
 
         stat1.lo_observed.fetch_add(252, Ordering::Relaxed);
         assert_eq!(stat2.lo_observed(), 252);
