@@ -20,8 +20,9 @@ impl<'a> Counter<'a> {
     }
 
     pub fn start_worker(&self) -> Result<()> {
-        let count = Some(self.count_objects()?);
-        *self.stats.lo_total.lock() = count;
+        let (remaining, total) = self.count_objects()?;
+        *self.stats.lo_remaining.lock() = Some(remaining);
+        *self.stats.lo_total.lock() = Some(total);
         Ok(())
     }
 
@@ -29,15 +30,18 @@ impl<'a> Counter<'a> {
     ///
     /// note: we pass in the transaction to be sure that the count is correct; Count must occur in
     ///       same transaction as retrieving the rows to be correct.
-    fn count_objects(&self) -> Result<u64> {
+    fn count_objects(&self) -> Result<(u64, u64)> {
         info!("counting large objects");
         let rows = self.conn
-            .query("SELECT count(*) FROM _nice_binary where sha2 is NULL \
-                    AND hash ~ '^[0-9A-Fa-f]{40}$'",
+            .query("SELECT\n\
+                        (SELECT count(*) FROM _nice_binary WHERE sha2 IS NULL),\n\
+                        (SELECT count(*) from _nice_binary)",
                    &[])?;
-        let count: i64 = rows.get(0).get(0);
+        let row = rows.get(0);
+        let remaining: i64 = row.get(0);
+        let total: i64 = row.get(1);
 
         #[cfg_attr(feature = "clippy", allow(cast_sign_loss))]
-        Ok(count as u64)
+        Ok((remaining as u64, total as u64))
     }
 }

@@ -69,11 +69,17 @@ impl<'a> Monitor<'a> {
         let cancel_interval = Duration::from_secs(1);
         let start_instant = Instant::now();
         let mut before: Stats = Default::default();
+        let mut remaining = None;
         let mut total = None;
 
         loop {
+            if remaining.is_none() {
+                // only fetch once to avoid locking
+                remaining = *self.stats.lo_remaining.lock();
+            }
+
             if total.is_none() {
-                // only fetch total once to avoid locking
+                // only fetch once to avoid locking
                 total = *self.stats.lo_total.lock();
             }
 
@@ -99,11 +105,11 @@ impl<'a> Monitor<'a> {
             println!();
 
             println!("Progress Overview:");
-            println!("    {}, {} of {} object have been migrated, ETA: {}",
-                     Self::progress(now.lo_committed, total),
-                     now.lo_committed,
-                     total.map(|v| format!("{}", v)).unwrap_or_else(|| "UNKNOWN".to_string()),
-                     Self::calculate_eta(now.lo_committed, total, now.duration));
+            Self::print_progress_overview(&mut io::stdout(),
+                                          now.lo_committed,
+                                          remaining,
+                                          total,
+                                          now.duration);
             println!();
 
             println!("Processed Objects by Thread Groups:");
@@ -168,8 +174,32 @@ impl<'a> Monitor<'a> {
         self.commit_queue.upgrade().is_none()
     }
 
-    fn progress(completed: u64, total: Option<u64>) -> String {
-        if let Some(total) = total {
+
+    fn print_progress_overview(f: &mut io::Write,
+                               committed: u64,
+                               remaining: Option<u64>,
+                               total: Option<u64>,
+                               duration: Duration) {
+        let total_committed = if let (Some(remaining), Some(total)) = (remaining, total) {
+            Some(total - remaining + committed)
+        } else {
+            None
+        };
+        let _ = writeln!(f,
+                         "    {}, {} of {} object have been migrated, ETA: {}",
+                         Self::progress(total_committed, total),
+                         if let Some(t) = total_committed {
+                             format!("{}", t)
+                         } else {
+                             "UNKNOWN".to_string()
+                         },
+                         total.map(|v| format!("{}", v)).unwrap_or_else(|| "UNKNOWN".to_string()),
+                         Self::calculate_eta(committed, remaining, duration));
+    }
+
+    #[cfg_attr(feature = "clippy", allow(option_unwrap_used))]
+    fn progress(completed: Option<u64>, total: Option<u64>) -> String {
+        if let (Some(total), Some(completed)) = (total, completed) {
             let percentage = completed as f32 / total as f32 * 100_f32;
             format!("{:.2}%", percentage)
         } else {
@@ -259,11 +289,39 @@ mod tests {
     use self::regex::Regex;
 
     #[test]
+    fn print_progress_overview() {
+        let mut output = vec![];
+        Monitor::print_progress_overview(&mut output, 0, None, None, Duration::new(1, 0));
+        assert_eq!(String::from_utf8(output).unwrap(),
+                   "    UNKNOWN, UNKNOWN of UNKNOWN object have been migrated, ETA: UNKNOWN\n");
+
+        let mut output = vec![];
+        Monitor::print_progress_overview(&mut output, 10, None, Some(50), Duration::new(1, 0));
+        assert_eq!(String::from_utf8(output).unwrap(),
+                   "    UNKNOWN, UNKNOWN of 50 object have been migrated, ETA: UNKNOWN\n");
+
+        let mut output = vec![];
+        Monitor::print_progress_overview(&mut output, 10, Some(60), None, Duration::new(1, 0));
+        assert!(String::from_utf8(output)
+            .unwrap()
+            .starts_with("    UNKNOWN, UNKNOWN of UNKNOWN object have been migrated, ETA: 20"));
+
+        let mut output = vec![];
+        Monitor::print_progress_overview(&mut output, 10, Some(30), Some(80), Duration::new(1, 0));
+        println!("{}", String::from_utf8(output.clone()).unwrap());
+        assert!(String::from_utf8(output)
+            .unwrap()
+            .starts_with("    75.00%, 60 of 80 object have been migrated, ETA: 20"));
+    }
+
+    #[test]
     fn progress() {
-        assert_eq!(Monitor::progress(50, None), "UNKNOWN");
-        assert_eq!(Monitor::progress(50, Some(200)), "25.00%");
-        assert_eq!(Monitor::progress(0, Some(200)), "0.00%");
-        assert_eq!(Monitor::progress(2482, Some(2482)), "100.00%");
+        assert_eq!(Monitor::progress(Some(50), None), "UNKNOWN");
+        assert_eq!(Monitor::progress(None, Some(15)), "UNKNOWN");
+        assert_eq!(Monitor::progress(None, None), "UNKNOWN");
+        assert_eq!(Monitor::progress(Some(50), Some(200)), "25.00%");
+        assert_eq!(Monitor::progress(Some(0), Some(200)), "0.00%");
+        assert_eq!(Monitor::progress(Some(2482), Some(2482)), "100.00%");
     }
 
     #[test]
