@@ -35,7 +35,7 @@ impl<'a> Receiver<'a> {
         while let Ok(mut lo) = rx.recv() {
             debug!("processing large object: {:?}", lo);
 
-            // retrieve Largo Object from Postgres
+            // retrieve Large Object from Postgres
             lo.retrieve_lo_data::<D>(self.conn, size_threshold)?;
 
             // global counter of received objects

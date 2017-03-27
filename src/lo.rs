@@ -15,7 +15,7 @@ pub enum Data {
     /// Large Object stored in a temporary file
     File(Temp),
 
-    /// Largo Object not yet or no longer available
+    /// Large Object not yet or no longer available
     ///
     /// See [`Lo::retrieve_lo_data`] for show to retrieve it.
     None,

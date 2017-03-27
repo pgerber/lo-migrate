@@ -1,4 +1,4 @@
-//! Fetching Largo Objects from Postgres
+//! Fetching Large Objects from Postgres
 
 use error::Result;
 use lo::{Data, Lo};
@@ -64,7 +64,7 @@ impl Lo {
         #[cfg_attr(feature = "clippy", allow(cast_possible_wrap))]
         #[cfg_attr(feature = "clippy", allow(cast_sign_loss))]
         let expected_size = self.size() as u64;
-        if expected_size as u64 != size {
+        if expected_size != size {
             warn!("size of binary read ({} bytes) differs from size according to \
                    _nice_binary.size ({} bytes).",
                   size,
@@ -116,7 +116,6 @@ impl<'a, D> Read for DigestReader<'a, D>
 
 #[cfg(test)]
 mod tests {
-    extern crate base64;
     extern crate postgres;
     extern crate rand;
 
@@ -145,6 +144,7 @@ mod tests {
     #[test]
     #[cfg(feature = "postgres_tests")]
     fn receive_vec_or_file() {
+        use serialize::hex::FromHex;
         use self::rand::Rng;
 
         let db_name: String = rand::thread_rng().gen_ascii_chars().take(63).collect();
@@ -162,7 +162,7 @@ mod tests {
         conn.batch_execute(include_str!("../tests/clean_data.sql")).unwrap();
 
         // keep object in memory
-        let mut lo = Lo::new(base64::decode("43fe96d43c21d1f86780f47b28fe24f142c395d9").unwrap(),
+        let mut lo = Lo::new("43fe96d43c21d1f86780f47b28fe24f142c395d9".from_hex().unwrap(),
                              198485881,
                              6842,
                              "text/test".to_string());
@@ -174,7 +174,7 @@ mod tests {
         });
 
         // keep object in temporary file
-        let mut lo = Lo::new(base64::decode("43fe96d43c21d1f86780f47b28fe24f142c395d9").unwrap(),
+        let mut lo = Lo::new("43fe96d43c21d1f86780f47b28fe24f142c395d9".from_hex().unwrap(),
                              198485881,
                              6842,
                              "text/test".to_string());

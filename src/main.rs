@@ -114,7 +114,7 @@ impl Args {
             .arg(Arg::with_name("commit_chunk_size")
                 .long("commit-chunk")
                 .value_name("INT")
-                .help("Number of SHA2 hashes commited per DB transaction"))
+                .help("Number of SHA2 hashes committed per DB transaction"))
             .arg(Arg::with_name("monitor_interval")
                 .short("i")
                 .long("interval")
@@ -239,7 +239,7 @@ fn main() {
     };
 
     let observer_pg_conns = connect_to_postgres(&args.postgres_url,
-                                                1 /* multiple threads not supperted */);
+                                                1 /* multiple threads not supported */);
     let receiver_pg_conns = connect_to_postgres(&args.postgres_url, args.receiver_threads);
     let storer_s3_conns = connect_to_s3(&args.s3_access_key,
                                         &args.s3_secret_key,
@@ -247,7 +247,7 @@ fn main() {
                                         args.storer_threads);
     let committer_pg_conns = connect_to_postgres(&args.postgres_url, args.committer_threads);
     let counter_pg_conns = connect_to_postgres(&args.postgres_url,
-                                               1 /* multiple threads not supperted */);
+                                               1 /* multiple threads not supported */);
 
     let thread_stat = ThreadStat::new();
 
@@ -403,6 +403,6 @@ fn main() {
     if failure_count > 0 {
         println!();
         println!("ERROR: At least one thread reported a failure, you must rerun the migration to \
-                  ensure all binary are transfered to S3");
+                  ensure all binary are transferred to S3");
     }
 }

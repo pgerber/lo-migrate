@@ -1,6 +1,6 @@
 //! observer thread implementation
 //!
-//! The observer thread retrieves the list of Largo Objects and passes them to the receiver thread.
+//! The observer thread retrieves the list of Large Objects and passes them to the receiver thread.
 
 use fallible_iterator::FallibleIterator;
 use postgres::Connection;

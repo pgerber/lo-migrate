@@ -102,7 +102,7 @@ impl<'a> Monitor<'a> {
             println!("    {}, {} of {} object have been migrated, ETA: {}",
                      Self::progress(now.lo_committed, total),
                      now.lo_committed,
-                     total.map(|v| format!("{}", v)).unwrap_or_else(|| "UNKOWN".to_string()),
+                     total.map(|v| format!("{}", v)).unwrap_or_else(|| "UNKNOWN".to_string()),
                      Self::calculate_eta(now.lo_committed, total, now.duration));
             println!();
 

@@ -56,7 +56,7 @@ pub struct ThreadStat {
 
     /// Number of Large Object that could not be copied successfully
     ///
-    /// Count of any object that could not be received, storred or whose hash
+    /// Count of any object that could not be received, stored or whose hash
     /// could not be commit to the database.
     lo_failed: Arc<AtomicU64>,
 }

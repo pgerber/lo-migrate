@@ -33,7 +33,7 @@ impl Lo {
                 self.store_read_data(data, client, bucket)
             }
             Data::Vector(ref data) => self.store_read_data(data, client, bucket),
-            Data::None => panic!("Large Object must have been fetched from Postgres"),
+            Data::None => panic!("Large Object must be fetched first"),
         }
     }
 
@@ -45,7 +45,7 @@ impl Lo {
         where P: AwsCredentialsProvider
     {
         let request = PutObjectRequest {
-            key: self.sha2_base64().expect("Largo Object must have been fetched from Postgres"),
+            key: self.sha2_base64().expect("Large Object must be fetched first"),
             bucket: bucket.to_string(),
             body: Some(data),
             content_type: Some(self.mime_type().to_string()),
