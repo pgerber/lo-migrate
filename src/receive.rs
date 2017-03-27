@@ -2,15 +2,14 @@
 
 use error::Result;
 use lo::{Data, Lo};
-use mktemp::Temp;
+use mkstemp::TempFile;
 use postgres::Connection;
 use postgres_large_object::{LargeObjectTransactionExt, Mode};
 use digest::Digest;
 #[cfg(feature = "try_from")]
 use std::convert::TryInto;
-use std::fs;
 use std::io;
-use std::io::Read;
+use std::io::{Read, Write};
 
 impl Lo {
     /// Retrieve Large Object data
@@ -55,9 +54,9 @@ impl Lo {
             (Data::Vector(data), size)
         } else {
             // keep binary data in temporary file
-            let temp_file = Temp::new_file()?;
-            let mut file = fs::File::create(&temp_file)?;
-            let size = io::copy(&mut sha2_reader, &mut file)?;
+            let mut temp_file = TempFile::new("lo_migrate.XXXXXX", true)?;
+            let size = io::copy(&mut sha2_reader, &mut temp_file)?;
+            temp_file.flush()?;
             (Data::File(temp_file), size)
         };
 

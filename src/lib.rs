@@ -52,7 +52,7 @@ extern crate aws_sdk_rust;
 extern crate chrono;
 extern crate digest;
 extern crate fallible_iterator;
-extern crate mktemp;
+extern crate mkstemp;
 extern crate postgres;
 extern crate postgres_large_object;
 extern crate rustc_serialize as serialize;

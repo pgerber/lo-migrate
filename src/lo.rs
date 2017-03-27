@@ -4,7 +4,7 @@ use postgres::types::Oid;
 use std::fmt;
 use std::mem;
 use serialize::hex::ToHex;
-use mktemp::Temp;
+use mkstemp::TempFile;
 use base64;
 
 /// Large Object Stored in memory or in a temporary file
@@ -13,7 +13,7 @@ pub enum Data {
     Vector(Vec<u8>),
 
     /// Large Object stored in a temporary file
-    File(Temp),
+    File(TempFile),
 
     /// Large Object not yet or no longer available
     ///
@@ -25,7 +25,7 @@ impl fmt::Debug for Data {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Data::Vector(ref v) => write!(fmt, "Vector(0x{}...)", &v[..4].to_hex()),
-            Data::File(ref f) => write!(fmt, "File({:?})", f.as_ref()),
+            Data::File(ref f) => write!(fmt, "File({:?})", f.path()),
             Data::None => write!(fmt, "None"),
         }
     }

@@ -22,7 +22,7 @@ impl Lo {
                 // TODO:
                 // Our AWS S3 library takes `&[u8]` as object content, it really should use trait
                 // `Read`. To avoid excessive memory use, the file is mapped into memory for now.
-                let mapped_file = Mmap::open_path(temp.as_ref(), Protection::Read)?;
+                let mapped_file = Mmap::open_path(temp.path(), Protection::Read)?;
 
                 let data = unsafe {
                     // This is considered unsafe because the mapped file may be altered
