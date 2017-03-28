@@ -8,6 +8,7 @@ use postgres_large_object::{LargeObjectTransactionExt, Mode};
 use digest::Digest;
 #[cfg(feature = "try_from")]
 use std::convert::TryInto;
+use std::env;
 use std::io;
 use std::io::{Read, Write};
 
@@ -54,7 +55,10 @@ impl Lo {
             (Data::Vector(data), size)
         } else {
             // keep binary data in temporary file
-            let mut temp_file = TempFile::new("lo_migrate.XXXXXX", true)?;
+            let mut temp_path = env::temp_dir();
+            temp_path.push("lo_migrate.XXXXXX");
+            let mut temp_file =
+                TempFile::new(temp_path.to_str().expect("tempdir not a UTF-8 path"), true)?;
             let size = io::copy(&mut sha2_reader, &mut temp_file)?;
             temp_file.flush()?;
             (Data::File(temp_file), size)
