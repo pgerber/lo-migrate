@@ -34,6 +34,7 @@ impl<'a> Committer<'a> {
 
             // commit sha2 hash to DB
             commit::commit(self.conn, &lo_chunk[..size])?;
+            trace!("committed {} new hashes", size);
 
             // increase counter of committed `Lo`s
             self.stats.lo_committed.fetch_add(size as u64, Ordering::Relaxed);

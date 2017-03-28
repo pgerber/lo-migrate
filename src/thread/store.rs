@@ -26,7 +26,7 @@ impl<'a> Storer<'a> {
     {
         // receive from receiver thread
         while let Ok(mut lo) = rx.recv() {
-            debug!("processing large object: {:?}", lo);
+            trace!("processing large object: {:?}", lo);
 
             // store data on S3
             lo.store(client, bucket)?;

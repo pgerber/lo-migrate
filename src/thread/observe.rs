@@ -64,7 +64,7 @@ impl<'a> Observer<'a> {
             }
             Ok(sha1) => {
                 let lo = Lo::new(sha1, oid, size, mime_type);
-                debug!("adding Lo to queue: {:?}", lo);
+                trace!("adding Lo to queue: {:?}", lo);
                 tx.send(lo)?;
 
                 // count received objects

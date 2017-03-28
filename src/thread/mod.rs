@@ -115,6 +115,7 @@ impl ThreadStat {
 
     /// Tell threads to cancel at earliest convenience
     pub fn cancel(&self) {
+        debug!("canceling threads");
         self.cancelled.store(true, Ordering::Relaxed);
     }
 
@@ -124,6 +125,7 @@ impl ThreadStat {
     /// otherwise.
     pub fn cancellation_point(&self) -> Result<()> {
         if self.is_cancelled() {
+            debug!("cancellation point: threads have been cancelled");
             Err(MigrationError::ThreadCancelled)
         } else {
             Ok(())

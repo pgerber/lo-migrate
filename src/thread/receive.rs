@@ -33,7 +33,7 @@ impl<'a> Receiver<'a> {
     {
         // receive from observer thread
         while let Ok(mut lo) = rx.recv() {
-            debug!("processing large object: {:?}", lo);
+            trace!("processing large object: {:?}", lo);
 
             // retrieve Large Object from Postgres
             lo.retrieve_lo_data::<D>(self.conn, size_threshold)?;

@@ -6,6 +6,7 @@ extern crate lo_migrate;
 extern crate postgres;
 extern crate sha2;
 extern crate env_logger;
+extern crate log;
 extern crate aws_sdk_rust;
 extern crate url;
 extern crate hyper;
@@ -19,10 +20,13 @@ use aws_sdk_rust::aws::s3::endpoint::Endpoint;
 use aws_sdk_rust::aws::s3::endpoint::Signature;
 use aws_sdk_rust::aws::common::region::Region;
 use aws_sdk_rust::aws::common::credentials::ParametersProvider;
+use log::LogLevelFilter;
+use env_logger::LogBuilder;
 use hyper::client::{self, Client, RedirectPolicy};
 use hyper::net::HttpsConnector;
 use lo_migrate::thread::{Committer, Counter, Monitor, Observer, Receiver, Storer, ThreadStat};
 use sha2::Sha256;
+use std::env;
 use std::fmt;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -225,7 +229,14 @@ fn handle_thread_error(error: &MigrationError, thread_name: &str) {
 
 fn main() {
     type TargetDigest = Sha256;
-    env_logger::init().unwrap();
+
+    let mut log_builder = LogBuilder::new();
+    log_builder.filter(Some("lo_migrate"), LogLevelFilter::Warn);
+    if let Ok(env) = env::var("RUST_LOG") {
+        log_builder.parse(&env);
+    }
+    log_builder.init().unwrap();
+
     let args = Args::new_from_env();
     println!("{}", args);
 

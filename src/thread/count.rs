@@ -23,6 +23,7 @@ impl<'a> Counter<'a> {
         let (remaining, total) = self.count_objects()?;
         *self.stats.lo_remaining.lock() = Some(remaining);
         *self.stats.lo_total.lock() = Some(total);
+        info!("thread has completed its mission");
         Ok(())
     }
 
