@@ -79,7 +79,7 @@ compiling. See also [Troubleshooting](#troubleshooting).
   the pkg-config build tool. On Debian  based systems you can do so via `$ sudo apt-get install libssl-dev
   pkg-config`. See [openssl-sys](https://github.com/sfackler/rust-openssl)' README for more details.
 * If the compilation fails, try installing this particular nightly version`$ rustup toolchain install
-  nightly-2017-03-15` and making it your default `$ rustup default nightly-2017-03-15`. Lo-migrate has been tested
+  nightly-2017-03-27` and making it your default `$ rustup default nightly-2017-03-27`. Lo-migrate has been tested
   against this version.
 
 # Design
