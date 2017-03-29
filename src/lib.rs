@@ -50,6 +50,8 @@
 
 extern crate aws_sdk_rust;
 extern crate chrono;
+#[macro_use]
+extern crate derive_error;
 extern crate digest;
 extern crate fallible_iterator;
 extern crate mkstemp;

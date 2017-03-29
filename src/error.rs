@@ -11,13 +11,19 @@ use lo::Lo;
 pub type Result<T> = result::Result<T, MigrationError>;
 
 /// Custom error type to be used by all public functions and method
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum MigrationError {
+    /// I/O error
     IoError(io::Error),
+    /// Postgres connection error
     PgConnError(postgres::error::ConnectError),
+    /// Postgres error
     PgError(postgres::error::Error),
+    /// AWS S3 error
     S3Error(s3::S3Error),
+    /// Queue send error
     SendError(SendError<Lo>),
+    /// Thread cancelled error
     ThreadCancelled,
 }
 
@@ -38,35 +44,5 @@ impl MigrationError {
         } else {
             false
         }
-    }
-}
-
-impl From<postgres::error::ConnectError> for MigrationError {
-    fn from(err: postgres::error::ConnectError) -> MigrationError {
-        MigrationError::PgConnError(err)
-    }
-}
-
-impl From<postgres::error::Error> for MigrationError {
-    fn from(err: postgres::error::Error) -> MigrationError {
-        MigrationError::PgError(err)
-    }
-}
-
-impl From<io::Error> for MigrationError {
-    fn from(err: io::Error) -> MigrationError {
-        MigrationError::IoError(err)
-    }
-}
-
-impl From<s3::S3Error> for MigrationError {
-    fn from(err: s3::S3Error) -> MigrationError {
-        MigrationError::S3Error(err)
-    }
-}
-
-impl From<SendError<Lo>> for MigrationError {
-    fn from(err: SendError<Lo>) -> MigrationError {
-        MigrationError::SendError(err)
     }
 }
