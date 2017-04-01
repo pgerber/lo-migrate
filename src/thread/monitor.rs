@@ -193,11 +193,10 @@ impl<'a> Monitor<'a> {
                          } else {
                              "UNKNOWN".to_string()
                          },
-                         total.map(|v| format!("{}", v)).unwrap_or_else(|| "UNKNOWN".to_string()),
+                         total.map_or_else(|| "UNKNOWN".to_string(), |v| format!("{}", v)),
                          Self::calculate_eta(committed, remaining, duration));
     }
 
-    #[cfg_attr(feature = "clippy", allow(option_unwrap_used))]
     fn progress(completed: Option<u64>, total: Option<u64>) -> String {
         if let (Some(total), Some(completed)) = (total, completed) {
             let percentage = completed as f32 / total as f32 * 100_f32;

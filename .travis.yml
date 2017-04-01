@@ -12,6 +12,7 @@ before_install:
   - while ! [[ $(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/) =~ ^200|404$ ]]; do sleep 1; done
   - while ! pg_isready -h localhost; do sleep 1; done
 script:
+  - cargo rustc --no-default-features --features "integer_atomics clippy" --lib -- -D warnings
   - cargo rustc --features clippy --lib -- -D warnings
   - cargo rustc --features clippy --bin lo_migrate_cli -- -D warnings
   - cargo test --no-fail-fast --features travis_tests

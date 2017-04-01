@@ -13,6 +13,8 @@
 #![cfg_attr(feature = "try_from", feature(try_from))]
 #![cfg_attr(feature = "integer_atomics", feature(integer_atomics))]
 
+#![warn(trivial_casts)]
+#![warn(trivial_numeric_casts)]
 #![deny(unused_must_use)]
 #![deny(const_err)]
 #![deny(legacy_directory_ownership)]
@@ -34,6 +36,7 @@
 #![cfg_attr(feature = "clippy", warn(empty_enum))]
 #![cfg_attr(feature = "clippy", warn(enum_glob_use))]
 #![cfg_attr(feature = "clippy", warn(float_arithmetic))]
+#![cfg_attr(feature = "clippy", warn(items_after_statements))]
 #![cfg_attr(feature = "clippy", warn(if_not_else))]
 #![cfg_attr(feature = "clippy", deny(mem_forget))]
 #![cfg_attr(feature = "clippy", warn(mut_mut))]
@@ -45,7 +48,9 @@
 #![cfg_attr(feature = "clippy", warn(result_unwrap_used))]
 #![cfg_attr(feature = "clippy", deny(unicode_not_nfc))]
 #![cfg_attr(feature = "clippy", deny(unseparated_literal_suffix))]
+#![cfg_attr(feature = "clippy", warn(single_match_else))]
 #![cfg_attr(feature = "clippy", deny(used_underscore_binding))]
+#![cfg_attr(feature = "clippy", deny(wrong_pub_self_convention))]
 #![cfg_attr(feature = "clippy", deny(wrong_self_convention))]
 
 extern crate aws_sdk_rust;

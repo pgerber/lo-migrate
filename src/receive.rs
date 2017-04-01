@@ -46,8 +46,8 @@ impl Lo {
             let size = self.size().try_into().expect("size limit exceeded");
 
             #[cfg(not(feature = "try_from"))]
-            #[allow(cast_possible_truncation)]
-            #[allow(cast_sign_loss)]
+            #[cfg_attr(feature = "clippy", allow(cast_possible_truncation))]
+            #[cfg_attr(feature = "clippy", allow(cast_sign_loss))]
             let size = self.size() as usize;
 
             let mut data = Vec::with_capacity(size);
