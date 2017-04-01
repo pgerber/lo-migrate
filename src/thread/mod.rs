@@ -19,11 +19,10 @@ mod store;
 pub use self::store::Storer;
 
 use error::{MigrationError, Result};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::atomic::Ordering;
 use lo::Lo;
-use spin;
 use postgres;
 
 /// Thread stats shared amongst all threads
@@ -35,12 +34,12 @@ pub struct ThreadStat {
     /// Number of large object that need to be migrated
     ///
     /// Number of entries in _nice_binary that need to be migrated if already known.
-    lo_remaining: Arc<spin::Mutex<Option<u64>>>,
+    lo_remaining: Arc<Mutex<Option<u64>>>,
 
     /// total_number of large objects
     ///
     /// Number of large object incl. objects already migrated.
-    lo_total: Arc<spin::Mutex<Option<u64>>>,
+    lo_total: Arc<Mutex<Option<u64>>>,
 
     /// Number of Large Object observed
     ///
@@ -74,8 +73,8 @@ impl ThreadStat {
     pub fn new() -> Self {
         ThreadStat {
             cancelled: Arc::new(AtomicBool::new(false)),
-            lo_remaining: Arc::new(spin::Mutex::new(None)),
-            lo_total: Arc::new(spin::Mutex::new(None)),
+            lo_remaining: Arc::new(Mutex::new(None)),
+            lo_total: Arc::new(Mutex::new(None)),
             lo_observed: Arc::new(AtomicU64::new(0)),
             lo_received: Arc::new(AtomicU64::new(0)),
             lo_stored: Arc::new(AtomicU64::new(0)),
@@ -85,11 +84,11 @@ impl ThreadStat {
     }
 
     pub fn lo_remaining(&self) -> Option<u64> {
-        *self.lo_remaining.lock()
+        *self.lo_remaining.lock().expect("failed to aquire lock")
     }
 
     pub fn lo_total(&self) -> Option<u64> {
-        *self.lo_total.lock()
+        *self.lo_total.lock().expect("failed to aquire lock")
     }
 
     pub fn lo_observed(&self) -> u64 {
@@ -176,10 +175,10 @@ mod tests {
         stat2.lo_committed.fetch_add(2, Ordering::Relaxed);
         assert_eq!(stat1.lo_committed(), 2);
 
-        *stat2.lo_remaining.lock() = Some(12);
+        *stat2.lo_remaining.lock().unwrap() = Some(12);
         assert_eq!(stat1.lo_remaining(), Some(12));
 
-        *stat1.lo_total.lock() = Some(66);
+        *stat1.lo_total.lock().unwrap() = Some(66);
         assert_eq!(stat2.lo_total(), Some(66));
     }
 }

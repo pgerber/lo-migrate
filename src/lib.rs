@@ -64,7 +64,6 @@ extern crate postgres;
 extern crate postgres_large_object;
 extern crate rustc_serialize as serialize;
 extern crate sha2;
-extern crate spin;
 extern crate memmap;
 extern crate hyper;
 extern crate base64;

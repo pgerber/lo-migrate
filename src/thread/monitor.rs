@@ -75,12 +75,12 @@ impl<'a> Monitor<'a> {
         loop {
             if remaining.is_none() {
                 // only fetch once to avoid locking
-                remaining = *self.stats.lo_remaining.lock();
+                remaining = *self.stats.lo_remaining.lock().expect("failed to aquire lock");
             }
 
             if total.is_none() {
                 // only fetch once to avoid locking
-                total = *self.stats.lo_total.lock();
+                total = *self.stats.lo_total.lock().expect("failed to aquire lock");
             }
 
             let now = Stats {
