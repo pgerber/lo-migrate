@@ -9,7 +9,7 @@ rust:
 before_install:
   - docker run -d -e CEPH_DEMO_ACCESS_KEY=access_key -e CEPH_DEMO_SECRET_KEY=secret_key -e CEPH_DEMO_UID=demo_uid  -e MON_IP=127.0.0.1 -e CEPH_PUBLIC_NETWORK=0.0.0.0/0 -p 8080:80 ceph/demo
   - docker run -d -p 5432 postgres
-  - while ! wget -S --spider http://localhost:8080; do sleep 1; done
+  - while ! [[ $(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/) =~ ^200|404$ ]]; do sleep 1; done
   - while ! pg_isready -h localhost; do sleep 1; done
 script:
   - cargo rustc --features clippy --lib -- -D warnings
