@@ -6,9 +6,19 @@ rust:
   # lo-migrate currently depends on nightly features
   # - beta
   # - stable
+env:
+  - >
+    CEPH_IMAGE=ceph/demo:latest
+    PG_IMAGE=postgres:latest
+  -  >
+    CEPH_IMAGE=ceph/demo:tag-build-master-kraken-centos-7
+    PG_IMAGE=postgres:9.6
+  - >
+    CEPH_IMAGE=ceph/demo:tag-build-master-jewel-ubuntu-16.04
+    PG_IMAGE=postgres:9.5
 before_install:
   - sudo sh -c 'echo "address=/localhost/127.0.0.1" >/etc/dnsmasq.d/localhost.conf' && sudo service dnsmasq restart
-  - docker run -d -e CEPH_DEMO_ACCESS_KEY=access_key -e CEPH_DEMO_SECRET_KEY=secret_key -e CEPH_DEMO_UID=demo_uid  -e MON_IP=127.0.0.1 -e CEPH_PUBLIC_NETWORK=0.0.0.0/0 -p 8080:80 ceph/demo
+  - docker run -d -e CEPH_DEMO_ACCESS_KEY=access_key -e CEPH_DEMO_SECRET_KEY=secret_key -e CEPH_DEMO_UID=demo_uid  -e MON_IP=127.0.0.1 -e CEPH_PUBLIC_NETWORK=0.0.0.0/0 -p 8080:80 $CEPH_IMAGE
   - docker run -d -p 5432 postgres
   - while ! [[ $(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/) =~ ^200|404$ ]]; do sleep 1; done
   - while ! pg_isready -h localhost; do sleep 1; done
@@ -32,6 +42,9 @@ script:
   # run tests
   - cargo test --no-fail-fast --features travis_tests
   - cargo test --no-fail-fast --no-default-features --features "travis_tests integer_atomics"
+after_success:
+  - cat Cargo.lock
+
 # matrix:
 #   allow_failures:
 #     - rust: nightly
