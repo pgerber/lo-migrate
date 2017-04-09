@@ -246,7 +246,7 @@ fn main() {
         endpoint: Some(Url::parse(&args.s3_url).expect("S3 url invalid")),
         proxy: None,
         user_agent: None,
-        is_bucket_virtual: false,
+        is_bucket_virtual: true,
     };
 
     let observer_pg_conns = connect_to_postgres(&args.postgres_url,

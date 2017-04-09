@@ -7,10 +7,15 @@ rust:
   # - beta
   # - stable
 before_install:
+  - sudo sh -c 'echo "address=/localhost/127.0.0.1" >/etc/dnsmasq.d/localhost.conf' && sudo service dnsmasq restart
   - docker run -d -e CEPH_DEMO_ACCESS_KEY=access_key -e CEPH_DEMO_SECRET_KEY=secret_key -e CEPH_DEMO_UID=demo_uid  -e MON_IP=127.0.0.1 -e CEPH_PUBLIC_NETWORK=0.0.0.0/0 -p 8080:80 ceph/demo
   - docker run -d -p 5432 postgres
   - while ! [[ $(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/) =~ ^200|404$ ]]; do sleep 1; done
   - while ! pg_isready -h localhost; do sleep 1; done
+addons:
+  apt:
+    packages:
+      - dnsmasq
 services:
   - docker
 script:

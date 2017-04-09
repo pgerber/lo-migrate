@@ -37,7 +37,7 @@ pub fn s3_conn() -> (S3Client<ParametersProvider, Client>, String) {
         endpoint: Some(Url::parse("http://localhost:8080").unwrap()),
         proxy: None,
         user_agent: None,
-        is_bucket_virtual: false,
+        is_bucket_virtual: true,
     };
 
     let provider = ParametersProvider::with_parameters("access_key", "secret_key", None).unwrap();
