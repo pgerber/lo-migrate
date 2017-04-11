@@ -24,7 +24,10 @@ pub enum Data {
 impl fmt::Debug for Data {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Data::Vector(ref v) => write!(fmt, "Vector(0x{}...)", &v[..4].to_hex()),
+            Data::Vector(ref v) => {
+                let repr = debug_fmt_slice(&v);
+                write!(fmt, "Vector({})", repr)
+            },
             Data::File(ref f) => write!(fmt, "File({:?})", f.path()),
             Data::None => write!(fmt, "None"),
         }
@@ -144,14 +147,11 @@ impl fmt::Debug for Lo {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let size = format!("{} bytes", self.size);
 
-        let mut sha1 = self.sha1[..5].to_hex();
-        sha1.push_str("...");
+        let sha1 = debug_fmt_slice(&self.sha1);
 
         let sha2 = match self.sha2 {
             Some(ref v) => {
-                let mut hex = v[..5].to_hex();
-                hex.push_str("...");
-                Some(hex)
+                Some(debug_fmt_slice(&v))
             }
             None => None,
         };
@@ -164,6 +164,22 @@ impl fmt::Debug for Lo {
             .field("sha2", &sha2)
             .field("data", &self.data)
             .finish()
+    }
+}
+
+fn debug_fmt_slice(slice: &[u8]) -> String {
+    let end = if slice.len() > 4 { 4 } else { slice.len() };
+    if end > 0 {
+        let mut repr = String::with_capacity(13);
+        repr.push_str("0x");
+        repr.push_str(&slice[..end].to_hex());
+        if slice.len() > 4 {
+            repr.push_str("...");
+        }
+        debug_assert!(repr.len() <= 13);
+        repr
+    } else {
+        "".to_string()
     }
 }
 
@@ -227,5 +243,13 @@ mod tests {
             _ => panic!(),
         }
         assert!(lo.lo_data().is_none());
+    }
+
+    #[test]
+    fn debug_fmt_slice_test() {
+        assert_eq!("", debug_fmt_slice(&[]));
+        assert_eq!("0x1234", debug_fmt_slice(&[0x12, 0x34]));
+        assert_eq!("0x12345678", debug_fmt_slice(&[0x12, 0x34, 0x56, 0x78]));
+        assert_eq!("0x12345678...", debug_fmt_slice(&[0x12, 0x34, 0x56, 0x78, 0x9a]));
     }
 }
