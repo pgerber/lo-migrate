@@ -7,7 +7,7 @@ CREATE TABLE _nice_binary (
     size bigint NOT NULL,
     mime_type character varying(255) NOT NULL,
     data oid,
-    sha2 character(44)
+    sha2 character(64)
 );
 
 SELECT pg_catalog.lo_create('198485881');
@@ -23,7 +23,7 @@ VALUES
 
         -- already migrated
     ('0000000000000000000000000000000000000000',   44, 'unused',               0,
-                                                 '0000000000000000000000000000000000000000000='),
+                                            '0000000000000000000000000000000000000000000000000000000000000000'),
     ('da39a3ee5e6b4b0d3255bfef95601890afd80709',    0, 'octet/stream', 198485883, null),
     ('4694849b7ceeae0e5254689ff1f352735581d6ec',   12, 'text/plain',   198485884, null),
 

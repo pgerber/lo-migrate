@@ -19,7 +19,6 @@ clippy = { version = "*", optional = true }
 mkstemp-rs = "0.0"
 memmap = "0.5"
 hyper = "0.10"
-base64 = "0.4"
 log = "0.3"
 env_logger = "0.4"
 url = "1.4"

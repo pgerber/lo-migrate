@@ -5,7 +5,6 @@ use std::fmt;
 use std::mem;
 use serialize::hex::ToHex;
 use mkstemp::TempFile;
-use base64;
 
 /// Large Object Stored in memory or in a temporary file
 pub enum Data {
@@ -25,9 +24,9 @@ impl fmt::Debug for Data {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Data::Vector(ref v) => {
-                let repr = debug_fmt_slice(&v);
+                let repr = debug_fmt_slice(v);
                 write!(fmt, "Vector({})", repr)
-            },
+            }
             Data::File(ref f) => write!(fmt, "File({:?})", f.path()),
             Data::None => write!(fmt, "None"),
         }
@@ -100,9 +99,9 @@ impl Lo {
 
     /// sha2 hash encoded as base64
     ///
-    /// Example hash: `"2jmj7l5rSw0yVb/vlWAYkK/YBwk="`
-    pub fn sha2_base64(&self) -> Option<String> {
-        self.sha2.as_ref().map(|h| base64::encode(h))
+    /// Example hash: `"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"`
+    pub fn sha2_hex(&self) -> Option<String> {
+        self.sha2.as_ref().map(|h| h.to_hex())
     }
 
     /// Size of Large Object (as stored in _nice_binary.size)
@@ -150,9 +149,7 @@ impl fmt::Debug for Lo {
         let sha1 = debug_fmt_slice(&self.sha1);
 
         let sha2 = match self.sha2 {
-            Some(ref v) => {
-                Some(debug_fmt_slice(&v))
-            }
+            Some(ref v) => Some(debug_fmt_slice(v)),
             None => None,
         };
 
@@ -194,7 +191,7 @@ mod tests {
     const SHA2: [u8; 32] = [62, 35, 232, 22, 0, 57, 89, 74, 51, 137, 79, 101, 100, 225, 177, 52,
                             139, 189, 122, 0, 136, 212, 44, 74, 203, 115, 238, 174, 213, 156, 0,
                             157];
-    const SHA2_B64: &str = "PiPoFgA5WUoziU9lZOGxNIu9egCI1CxKy3PurtWcAJ0=";
+    const SHA2_HEX: &str = "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d";
 
     #[test]
     fn initial_state() {
@@ -210,7 +207,7 @@ mod tests {
     fn sha2_unset() {
         let lo = Lo::new(SHA1[..].into(), 82, 159, "text/plain".to_string());
         assert_eq!(lo.sha2(), None);
-        assert_eq!(lo.sha2_base64(), None);
+        assert_eq!(lo.sha2_hex(), None);
     }
 
     #[test]
@@ -218,7 +215,7 @@ mod tests {
         let mut lo = Lo::new(SHA1[..].into(), 82, 159, "text/plain".to_string());
         lo.set_sha2(SHA2[..].into());
         assert_eq!(lo.sha2().unwrap(), &SHA2);
-        assert_eq!(lo.sha2_base64().unwrap(), SHA2_B64);
+        assert_eq!(lo.sha2_hex().unwrap(), SHA2_HEX);
     }
 
     #[test]
@@ -250,6 +247,7 @@ mod tests {
         assert_eq!("", debug_fmt_slice(&[]));
         assert_eq!("0x1234", debug_fmt_slice(&[0x12, 0x34]));
         assert_eq!("0x12345678", debug_fmt_slice(&[0x12, 0x34, 0x56, 0x78]));
-        assert_eq!("0x12345678...", debug_fmt_slice(&[0x12, 0x34, 0x56, 0x78, 0x9a]));
+        assert_eq!("0x12345678...",
+                   debug_fmt_slice(&[0x12, 0x34, 0x56, 0x78, 0x9a]));
     }
 }
