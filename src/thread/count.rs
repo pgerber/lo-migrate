@@ -21,8 +21,8 @@ impl<'a> Counter<'a> {
 
     pub fn start_worker(&self) -> Result<()> {
         let (remaining, total) = self.count_objects()?;
-        *self.stats.lo_remaining.lock().expect("failed to aquire lock") = Some(remaining);
-        *self.stats.lo_total.lock().expect("failed to aquire lock") = Some(total);
+        *self.stats.lo_remaining.lock().expect("failed to acquire lock") = Some(remaining);
+        *self.stats.lo_total.lock().expect("failed to acquire lock") = Some(total);
         info!("thread has completed its mission");
         Ok(())
     }

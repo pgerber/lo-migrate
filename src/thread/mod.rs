@@ -84,11 +84,11 @@ impl ThreadStat {
     }
 
     pub fn lo_remaining(&self) -> Option<u64> {
-        *self.lo_remaining.lock().expect("failed to aquire lock")
+        *self.lo_remaining.lock().expect("failed to acquire lock")
     }
 
     pub fn lo_total(&self) -> Option<u64> {
-        *self.lo_total.lock().expect("failed to aquire lock")
+        *self.lo_total.lock().expect("failed to acquire lock")
     }
 
     pub fn lo_observed(&self) -> u64 {
