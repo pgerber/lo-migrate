@@ -227,6 +227,11 @@ fn handle_thread_error(error: &MigrationError, thread_name: &str) {
     };
 }
 
+fn add_constraints(pg_client: &Connection) -> Result<(), postgres::error::Error> {
+    pg_client.batch_execute("ALTER TABLE _nice_binary ALTER COLUMN sha2 set NOT NULL; \
+    CREATE UNIQUE INDEX IF NOT EXISTS _nice_binary_sha2_key on _nice_binary (sha2);")
+}
+
 fn main() {
     type TargetDigest = Sha256;
 
@@ -366,6 +371,9 @@ fn main() {
         drop(cmt_tx);
         let monitor_interval = args.monitor_interval;
         let thread_stat = thread_stat.clone();
+        let receiver_queue = args.receiver_queue;
+        let storer_queue = args.storer_queue;
+        let committer_queue = args.committer_queue;
 
         threads.push(thread::Builder::new()
             .name("monitor".to_string())
@@ -373,11 +381,11 @@ fn main() {
                 let monitor = Monitor {
                     stats: &thread_stat,
                     receive_queue: rcv_rx_weak,
-                    receive_queue_size: args.receiver_queue,
+                    receive_queue_size: receiver_queue,
                     store_queue: str_rx_weak,
-                    store_queue_size: args.storer_queue,
+                    store_queue_size: storer_queue,
                     commit_queue: cmt_rx_weak,
-                    commit_queue_size: args.committer_queue,
+                    commit_queue_size: committer_queue,
                 };
                 monitor.start_worker(Duration::from_secs(monitor_interval));
             })
@@ -415,5 +423,14 @@ fn main() {
         println!();
         println!("ERROR: At least one thread reported a failure, you must rerun the migration to \
                   ensure all binary are transferred to S3");
+    } else {
+        print!("Adding NOT NULL constraint and UNIQUE INDEX ... ");
+        add_constraints(&connect_to_postgres(&args.postgres_url, 1)
+                .into_iter()
+                .next()
+                .unwrap())
+            .unwrap();
+        println!("done");
+        println!("Migration completed")
     }
 }
