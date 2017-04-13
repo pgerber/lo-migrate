@@ -12,7 +12,7 @@ fallible-iterator = "0.1"
 sha2 = "0.4"
 postgres = "0.13"
 postgres_large_object = "0.5"
-aws-sdk-rust = "0.1"
+aws-sdk-rust = { version = "0.1", git = "https://github.com/pgerber/aws-sdk-rust", branch = "plus" }
 rustc-serialize = "0.3"
 two-lock-queue = "0.1"
 clippy = { version = "*", optional = true }
