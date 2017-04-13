@@ -33,7 +33,7 @@ pub fn s3_conn() -> (S3Client<ParametersProvider, Client>, String) {
 
     let endpoint = Endpoint {
         region: Region::ApNortheast1,
-        signature: Signature::V4,
+        signature: Signature::V2,
         endpoint: Some(Url::parse("http://localhost:8080").unwrap()),
         proxy: None,
         user_agent: None,
