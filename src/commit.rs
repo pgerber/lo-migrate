@@ -13,7 +13,7 @@ pub fn commit(conn: &Connection, objects: &[Lo]) -> Result<()> {
 
     for lo in objects {
         trace!("preparing to commit new hash for large object: {:?}", lo);
-        let sha2 = lo.sha2_hex().expect("SHA2 hash unknown");
+        let sha2 = lo.sha2_base64().expect("SHA2 hash unknown");
         if stmt.execute(&[&sha2, &lo.sha1_hex()])? == 0 {
             warn!("could not update sha2 hash for lo (did it vanish?): {:?}",
                   &lo);

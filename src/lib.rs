@@ -66,6 +66,7 @@ extern crate rustc_serialize as serialize;
 extern crate sha2;
 extern crate memmap;
 extern crate hyper;
+extern crate base64;
 #[macro_use]
 extern crate log;
 extern crate two_lock_queue;
