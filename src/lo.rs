@@ -25,7 +25,7 @@ impl fmt::Debug for Data {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Data::Vector(ref v) => {
-                let repr = debug_fmt_slice(&v);
+                let repr = debug_fmt_slice(v);
                 write!(fmt, "Vector({})", repr)
             },
             Data::File(ref f) => write!(fmt, "File({:?})", f.path()),
@@ -151,7 +151,7 @@ impl fmt::Debug for Lo {
 
         let sha2 = match self.sha2 {
             Some(ref v) => {
-                Some(debug_fmt_slice(&v))
+                Some(debug_fmt_slice(v))
             }
             None => None,
         };
