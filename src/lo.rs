@@ -97,7 +97,7 @@ impl Lo {
         self.sha2 = Some(data);
     }
 
-    /// sha2 hash encoded as base64
+    /// sha2 hash encoded as hex
     ///
     /// Example hash: `"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"`
     pub fn sha2_hex(&self) -> Option<String> {
@@ -165,15 +165,23 @@ impl fmt::Debug for Lo {
 }
 
 fn debug_fmt_slice(slice: &[u8]) -> String {
-    let end = if slice.len() > 4 { 4 } else { slice.len() };
+    const TRUNCATE_AT: usize = 4; // show at most N bytes
+    const STRING_CAPACITY: usize = TRUNCATE_AT * 2 + 5;
+    let end = if slice.len() > TRUNCATE_AT {
+        TRUNCATE_AT
+    } else {
+        slice.len()
+    };
+
     if end > 0 {
-        let mut repr = String::with_capacity(13);
+        let mut repr = String::with_capacity(STRING_CAPACITY);
         repr.push_str("0x");
         repr.push_str(&slice[..end].to_hex());
-        if slice.len() > 4 {
+        if slice.len() > TRUNCATE_AT {
             repr.push_str("...");
+            debug_assert_eq!(repr.len(), STRING_CAPACITY);
         }
-        debug_assert!(repr.len() <= 13);
+        debug_assert!(repr.len() <= STRING_CAPACITY);
         repr
     } else {
         "".to_string()
