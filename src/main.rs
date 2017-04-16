@@ -26,11 +26,9 @@ use hyper::client::{self, Client, RedirectPolicy};
 use hyper::net::HttpsConnector;
 use lo_migrate::thread::{Committer, Counter, Monitor, Observer, Receiver, Storer, ThreadStat};
 use sha2::Sha256;
-use std::env;
-use std::fmt;
+use std::{env, fmt, process, thread};
 use std::str::FromStr;
 use std::sync::Arc;
-use std::thread;
 use std::time::Duration;
 use lo_migrate::error::MigrationError;
 
@@ -50,6 +48,7 @@ struct Args {
     max_in_memory: i64,
     commit_chunk_size: usize,
     monitor_interval: u64,
+    finalize: bool,
 }
 
 impl Args {
@@ -124,6 +123,10 @@ impl Args {
                 .long("interval")
                 .value_name("SECS")
                 .help("Interval in which stats are shown (in secs)"))
+            .arg(Arg::with_name("finalize")
+                .short("f")
+                .long("finalize")
+                .help("Create UNIQUE INDEX and NOT NULL constraint"))
             .get_matches();
 
         Args {
@@ -159,6 +162,7 @@ impl Args {
             }),
             monitor_interval: matches.value_of("monitor_interval")
                 .map_or(10, |i| u64::from_str(i).expect("monitor interval invalid")),
+            finalize: matches.is_present("finalize"),
         }
     }
 }
@@ -413,6 +417,8 @@ fn main() {
             failure_count += 1;
             if let Some(e) = e.downcast_ref::<String>() {
                 println!("ERROR: Thread {} panicked: {}", name, e);
+            } else if let Some(e) = e.downcast_ref::<&'static str>() {
+                println!("ERROR: Thread {} panicked: {}", name, e);
             } else {
                 println!("ERROR: Thread {} panicked: {:?}", name, e);
             }
@@ -423,14 +429,18 @@ fn main() {
         println!();
         println!("ERROR: At least one thread reported a failure, you must rerun the migration to \
                   ensure all binary are transferred to S3");
-    } else {
-        print!("Adding NOT NULL constraint and UNIQUE INDEX ... ");
+        process::exit(1);
+    }
+    print!("Adding NOT NULL constraint and UNIQUE INDEX ... ");
+    if args.finalize {
         add_constraints(&connect_to_postgres(&args.postgres_url, 1)
                 .into_iter()
                 .next()
                 .unwrap())
             .unwrap();
         println!("done");
-        println!("Migration completed")
+    } else {
+        println!("skipping (--finalize not given)");
     }
+    println!("Migration completed");
 }
