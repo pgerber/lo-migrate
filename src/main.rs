@@ -135,34 +135,50 @@ impl Args {
             s3_secret_key: matches.value_of("s3_secret_key").unwrap().to_string(),
             s3_bucket_name: matches.value_of("s3_bucket_name").unwrap().to_string(),
             postgres_url: matches.value_of("postgres_url").unwrap().to_string(),
-            receiver_threads: matches.value_of("receiver_threads")
-                .map_or(2,
-                        |i| usize::from_str(i).expect("receiver thread count invalid")),
-            storer_threads: matches.value_of("storer_threads")
-                .map_or(5,
-                        |i| usize::from_str(i).expect("storer thread count invalid")),
-            committer_threads: matches.value_of("committer_threads")
-                .map_or(2,
-                        |i| usize::from_str(i).expect("receiver committer count invalid")),
-            receiver_queue: matches.value_of("receiver_queue")
-                .map_or(8192,
-                        |i| usize::from_str(i).expect("receiver queue size invalid")),
-            storer_queue: matches.value_of("storer_queue")
-                .map_or(1024,
-                        |i| usize::from_str(i).expect("storer queue size invalid")),
-            committer_queue: matches.value_of("committer_queue")
-                .map_or(8192,
-                        |i| usize::from_str(i).expect("committer queue size invalid")),
+            receiver_threads: Self::expect_greater_zero(matches.value_of("receiver_threads"),
+                                                        2,
+                                                        "receiver thread count invalid"),
+            storer_threads: Self::expect_greater_zero(matches.value_of("storer_threads"),
+                                                      5,
+                                                      "storer thread count invalid"),
+            committer_threads: Self::expect_greater_zero(matches.value_of("committer_threads"),
+                                                         2,
+                                                         "receiver committer count invalid"),
+            receiver_queue: Self::expect_greater_zero(matches.value_of("receiver_queue"),
+                                                      8192,
+                                                      "receiver queue size invalid"),
+            storer_queue: Self::expect_greater_zero(matches.value_of("storer_queue"),
+                                                    1024,
+                                                    "storer queue size invalid"),
+            committer_queue: Self::expect_greater_zero(matches.value_of("committer_queue"),
+                                                       8192,
+                                                       "committer queue size invalid"),
             max_in_memory: matches.value_of("max_in_memory")
                 .map_or(1024,
                         |i| i64::from_str(i).expect("maximum in-memory size invalid")) *
                            1024,
-            commit_chunk_size: matches.value_of("commit_chunk_size").map_or(100, |i| {
-                usize::from_str(i).expect("commit check size invalid")
-            }),
-            monitor_interval: matches.value_of("monitor_interval")
-                .map_or(10, |i| u64::from_str(i).expect("monitor interval invalid")),
+            commit_chunk_size: Self::expect_greater_zero(matches.value_of("commit_chunk_size"),
+                                                         100,
+                                                         "commit check size invalid"),
+            monitor_interval: Self::expect_greater_zero(matches.value_of("monitor_interval"),
+                                                        10,
+                                                        "monitor interval invalid"),
             finalize: matches.is_present("finalize"),
+        }
+    }
+
+    fn expect_greater_zero<T>(string: Option<&str>, default: T, msg: &str) -> T
+        where T: FromStr + PartialEq<T> + PartialOrd<T> + From<u8>,
+              <T as std::str::FromStr>::Err: std::fmt::Debug
+    {
+        if let Some(string) = string {
+            let value = FromStr::from_str(string).expect(&format!("{}: found {:?}", msg, string));
+            if value <= From::from(0) {
+                panic!(format!("{}: found {:?}", msg, string));
+            }
+            value
+        } else {
+            default
         }
     }
 }

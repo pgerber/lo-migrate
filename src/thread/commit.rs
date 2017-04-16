@@ -26,6 +26,7 @@ impl<'a> Committer<'a> {
     }
 
     pub fn start_worker(&self, rx: Arc<Receiver<Lo>>, chunk_size: usize) -> Result<()> {
+        assert!(chunk_size > 0, "chunk size cannot be zero");
         let mut lo_chunk: Vec<_> =
             (0..chunk_size).map(|_| Lo::new(vec![], 0, i64::min_value(), "".to_string())).collect();
 
