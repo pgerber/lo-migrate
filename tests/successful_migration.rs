@@ -98,7 +98,7 @@ fn assert_object_in_store(client: &S3Client<ParametersProvider, Client>,
         ..Default::default()
     };
     let response = client.get_object(&request, None).unwrap();
-    let mut actual_sha256 = Sha256::new();
+    let mut actual_sha256 = Sha256::default();
     actual_sha256.input(response.get_body());
 
     assert_eq!(expected_sha256, &actual_sha256.result().to_hex());

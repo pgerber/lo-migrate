@@ -139,7 +139,7 @@ mod tests {
     }
 
     fn assert_hash_correct(hash: &[u8], data: &[u8]) {
-        let mut hasher = Sha256::new();
+        let mut hasher = Sha256::default();
         hasher.input(data);
         assert_eq!(hash[..], hasher.result()[..]);
     }
