@@ -1,5 +1,6 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
+#![feature(box_patterns)]
 
 extern crate clap;
 extern crate lo_migrate;
@@ -14,6 +15,8 @@ extern crate two_lock_queue;
 extern crate hyper_rustls;
 
 use postgres::{Connection, TlsMode};
+use postgres::error::Error as PgError;
+use postgres::error::SqlState;
 use url::Url;
 use aws_sdk_rust::aws::s3::s3client::S3Client;
 use aws_sdk_rust::aws::s3::endpoint::Endpoint;
@@ -247,7 +250,16 @@ fn handle_thread_error(error: &MigrationError, thread_name: &str) {
     };
 }
 
-fn add_constraints(pg_client: &Connection) -> Result<(), postgres::error::Error> {
+fn add_sha2_column(pg_client: &Connection) -> Result<(), PgError> {
+    match pg_client.batch_execute("ALTER TABLE _nice_binary ADD COLUMN sha2 CHAR(64)") {
+        Err(PgError::Db(box ref db_err)) if db_err.code == SqlState::DuplicateColumn => {
+            Ok(()) // ignore existing "sha2" column
+        }
+        r => r,
+    }
+}
+
+fn add_constraints(pg_client: &Connection) -> Result<(), PgError> {
     pg_client.batch_execute("ALTER TABLE _nice_binary ALTER COLUMN sha2 set NOT NULL; \
     CREATE UNIQUE INDEX IF NOT EXISTS _nice_binary_sha2_key on _nice_binary (sha2);")
 }
@@ -302,9 +314,12 @@ fn main() {
     let (cmt_tx, cmt_rx) = two_lock_queue::channel(args.committer_queue);
     let (cmt_tx, cmt_rx) = (Arc::new(cmt_tx), Arc::new(cmt_rx));
 
+    // create sha2 column
+    let conn = observer_pg_conns.into_iter().next().unwrap();
+    add_sha2_column(&conn).expect("failed to add \"sha2\" column");
+
     // create observer thread
     {
-        let conn = observer_pg_conns.into_iter().next().unwrap();
         let thread_stat = thread_stat.clone();
         let tx = rcv_tx.clone();
         threads.push(thread::Builder::new()
