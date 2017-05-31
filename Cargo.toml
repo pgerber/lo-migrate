@@ -4,14 +4,14 @@ version = "0.1.0"
 authors = ["Peter Gerber <peter@arbitrary.ch>"]
 
 [dependencies]
-clap = "2.22"
+clap = "2.24"
 chrono = "0.3"
 derive-error = "0.0"
 digest = "0.5"
 fallible-iterator = "0.1"
 sha2 = "0.5"
-postgres = "0.13"
-postgres_large_object = "0.5"
+postgres = "0.14"
+postgres_large_object = "0.6"
 aws-sdk-rust = "0.1"
 rustc-serialize = "0.3"
 two-lock-queue = "0.1"
@@ -22,15 +22,11 @@ hyper = "0.10"
 log = "0.3"
 env_logger = "0.4"
 url = "1.4"
-hyper-rustls = "0.3"
+hyper-rustls = "0.6"
 
 [dev-dependencies]
 rand = "0.3"
 regex = "0.2"
-
-[replace]
-# doesn't build using Nightly but we need nightly for the atomic integers
-"lsio:0.1.17" = { git = "https://github.com/pgerber/lsio", branch = "nightly_0_1_17" }
 
 [features]
 travis_tests = ["postgres_tests", "s3_tests"]

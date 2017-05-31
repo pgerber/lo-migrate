@@ -2,7 +2,7 @@ language: rust
 sudo: required
 rust:
   - nightly
-  - nightly-2017-03-27
+  - nightly-2017-05-30
   # lo-migrate currently depends on nightly features
   # - beta
   # - stable
