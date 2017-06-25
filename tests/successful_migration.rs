@@ -4,9 +4,11 @@
 extern crate aws_sdk_rust;
 extern crate hyper;
 extern crate lo_migrate;
+extern crate log;
 extern crate postgres;
 extern crate rustc_serialize as serialize;
 extern crate sha2;
+extern crate simple_logger;
 extern crate two_lock_queue as queue;
 
 mod common;
@@ -20,6 +22,7 @@ use serialize::hex::ToHex;
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use lo_migrate::thread::{Committer, Counter, Observer, Storer, Receiver, ThreadStat};
+use log::LogLevel;
 
 // sha256 hashes of clean_data.sql sorted by OID (DB column data)
 const SHA256_HEX: [&str; 5] = ["b80184fdaee065cb31e1f2417bb14412ceb819cf57a46246ec5b4f8da95ef268",
@@ -34,6 +37,8 @@ const MIME_TYPES: [&str; 5] = ["", "octet/stream", "octet/stream", "text/plain",
 /// Test complete migration from Postgres to S3
 #[test]
 fn migration() {
+    simple_logger::init_with_level(LogLevel::Debug).unwrap();
+
     let stats = ThreadStat::new();
     let pg_conn = postgres_conn();
     let (s3_client, bucket_name) = s3_conn();

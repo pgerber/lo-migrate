@@ -27,6 +27,7 @@ hyper-rustls = "0.6"
 [dev-dependencies]
 rand = "0.3"
 regex = "0.2"
+simple_logger = "0.4"
 
 [features]
 travis_tests = ["postgres_tests", "s3_tests"]
