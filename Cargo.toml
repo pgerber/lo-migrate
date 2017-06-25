@@ -4,12 +4,12 @@ version = "0.1.0"
 authors = ["Peter Gerber <peter@arbitrary.ch>"]
 
 [dependencies]
-clap = "2.24"
-chrono = "0.3"
+clap = "2.25"
+chrono = "0.4"
 derive-error = "0.0"
-digest = "0.5"
+digest = "0.6"
 fallible-iterator = "0.1"
-sha2 = "0.5"
+sha2 = "0.6"
 postgres = "0.14"
 postgres_large_object = "0.6"
 aws-sdk-rust = "0.1"
@@ -21,7 +21,7 @@ memmap = "0.5"
 hyper = "0.10"
 log = "0.3"
 env_logger = "0.4"
-url = "1.4"
+url = "1.5"
 hyper-rustls = "0.6"
 
 [dev-dependencies]
