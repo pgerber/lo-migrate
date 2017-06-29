@@ -3,12 +3,12 @@ extern crate postgres;
 extern crate rand;
 extern crate hyper;
 
-use aws_sdk_rust::aws::common::credentials::ParametersProvider;
-use aws_sdk_rust::aws::common::region::Region;
-use aws_sdk_rust::aws::s3::bucket::CreateBucketRequest;
-use aws_sdk_rust::aws::s3::endpoint::{Endpoint, Signature};
-use aws_sdk_rust::aws::s3::s3client::S3Client;
-use hyper::{Client, Url};
+use self::aws_sdk_rust::aws::common::credentials::ParametersProvider;
+use self::aws_sdk_rust::aws::common::region::Region;
+use self::aws_sdk_rust::aws::s3::bucket::CreateBucketRequest;
+use self::aws_sdk_rust::aws::s3::endpoint::{Endpoint, Signature};
+use self::aws_sdk_rust::aws::s3::s3client::S3Client;
+use self::hyper::{Client, Url};
 use self::rand::Rng;
 
 /// create connection to Postgres

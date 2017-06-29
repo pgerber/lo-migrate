@@ -29,7 +29,7 @@ use hyper::client::{self, Client, RedirectPolicy};
 use hyper::net::HttpsConnector;
 use lo_migrate::thread::{Committer, Counter, Monitor, Observer, Receiver, Storer, ThreadStat};
 use sha2::Sha256;
-use std::{env, fmt, process, thread};
+use std::{env, fmt, io, process, thread};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -317,6 +317,8 @@ fn main() {
     // create sha2 column
     let conn = observer_pg_conns.into_iter().next().unwrap();
     add_sha2_column(&conn).expect("failed to add \"sha2\" column");
+    lo_migrate::utils::disable_batch_job(&mut io::stdout(), &conn)
+        .expect("failed to disable batchjob");
 
     // create observer thread
     {

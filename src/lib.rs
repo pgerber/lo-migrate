@@ -76,6 +76,7 @@ mod lo;
 mod store;
 mod receive;
 pub mod thread;
+pub mod utils;
 
 use aws_sdk_rust::aws::s3;
 use aws_sdk_rust::aws;
