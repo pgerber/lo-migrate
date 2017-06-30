@@ -29,7 +29,7 @@ use hyper::client::{self, Client, RedirectPolicy};
 use hyper::net::HttpsConnector;
 use lo_migrate::thread::{Committer, Counter, Monitor, Observer, Receiver, Storer, ThreadStat};
 use sha2::Sha256;
-use std::{env, fmt, io, process, thread};
+use std::{env, fmt, process, thread};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
