@@ -7,42 +7,29 @@ use common::*;
 
 #[test]
 fn batch_job_active() {
-    batch_job_exists_helper(true);
+    assert_eq!(batch_job_exists_helper(true).unwrap_err(),
+               "Batch job \"nice2.dms.DeleteUnreferencedBinariesBatchJob\" must be deactivated \
+                before the migration can be started");
 }
 
 #[test]
 fn batch_job_inactive() {
-    batch_job_exists_helper(false);
+    assert!(batch_job_exists_helper(false).is_ok());
 }
 
-fn batch_job_exists_helper(active: bool) {
+fn batch_job_exists_helper(active: bool) -> Result<(), String> {
     let conn = postgres_conn();
     create_batch_job_table(&conn);
     create_batch_job(&conn, active);
-    let mut output = Vec::new();
-    lo_migrate::utils::disable_batch_job(&mut output, &conn).unwrap();
-    assert_eq!(String::from_utf8_lossy(&output),
-               r#"Disabling batchjob "nice2.dms.DeleteUnreferencedBinariesBatchJob" ... done"#);
+    lo_migrate::utils::check_batch_job_is_disabled(&conn)
 }
 
 #[test]
 fn batch_job_missing() {
     let conn = postgres_conn();
     create_batch_job_table(&conn);
-    let mut output = Vec::new();
-    lo_migrate::utils::disable_batch_job(&mut output, &conn).unwrap();
-    assert_eq!(String::from_utf8_lossy(&output),
-               "Disabling batchjob \"nice2.dms.DeleteUnreferencedBinariesBatchJob\" ... \
-               skipped (no such batchjob)");
-}
-
-#[test]
-fn batch_job_failure() {
-    let conn = postgres_conn();
-    let mut output = Vec::new();
-    assert!(lo_migrate::utils::disable_batch_job(&mut output, &conn).is_err());
-    assert_eq!(String::from_utf8_lossy(&output),
-               r#"Disabling batchjob "nice2.dms.DeleteUnreferencedBinariesBatchJob" ... failed"#);
+    assert_eq!(lo_migrate::utils::check_batch_job_is_disabled(&conn).unwrap_err(),
+               r#"Batch job "nice2.dms.DeleteUnreferencedBinariesBatchJob" not found"#);
 }
 
 fn create_batch_job_table(conn: &postgres::Connection) {

@@ -317,8 +317,7 @@ fn main() {
     // create sha2 column
     let conn = observer_pg_conns.into_iter().next().unwrap();
     add_sha2_column(&conn).expect("failed to add \"sha2\" column");
-    lo_migrate::utils::disable_batch_job(&mut io::stdout(), &conn)
-        .expect("failed to disable batchjob");
+    lo_migrate::utils::check_batch_job_is_disabled(&conn).expect("check failed");
 
     // create observer thread
     {
