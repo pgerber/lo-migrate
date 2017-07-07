@@ -7,9 +7,11 @@ rust:
   # - beta
   # - stable
 env:
+  # adjust condition in after_success too!
   - >
     CEPH_IMAGE=ceph/demo:latest
     PG_IMAGE=postgres:latest
+    RUSTFLAGS="-C link-dead-code"
   -  >
     CEPH_IMAGE=ceph/demo:tag-build-master-kraken-centos-7
     PG_IMAGE=postgres:9.6
@@ -26,6 +28,16 @@ addons:
   apt:
     packages:
       - dnsmasq
+
+      # code coverage
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - cmake
+      - gcc
+      - binutils-dev
+      - libiberty-dev
+      - zlib1g-dev
 services:
   - docker
 script:
@@ -40,10 +52,31 @@ script:
   - '[[ "$TRAVIS_RUST_VERSION" != "nightly" ]] || cargo rustc --features clippy --bin lo_migrate_cli -- -D warnings'
 
   # run tests
-  - cargo test --no-fail-fast --features travis_tests
   - cargo test --no-fail-fast --no-default-features --features "travis_tests integer_atomics"
+  - cargo test --no-fail-fast --features travis_tests
 after_success:
   - cat Cargo.lock
+  - |
+    # code coverage
+    if [[ "$TRAVIS_RUST_VERSION" = "nightly" && "$CEPH_IMAGE" = "ceph/demo:latest" && "$PG_IMAGE" = "postgres:latest" ]]; then
+        wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
+        tar xzf master.tar.gz &&
+        cd kcov-master &&
+        mkdir build &&
+        cd build &&
+        cmake .. &&
+        make &&
+        sudo make install &&
+        cd ../.. &&
+        rm -rf kcov-master &&
+        for file in target/debug/*-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]; do
+            mkdir -p "target/cov/$(basename $file)" || err=true
+            kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file" || err=true;
+        done &&
+        [[ "${err-}" != "true" ]] &&
+        bash <(curl -s https://codecov.io/bash) &&
+        echo "Uploaded code coverage"
+    fi
 
 # matrix:
 #   allow_failures:

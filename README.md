@@ -1,6 +1,7 @@
 # Migrate Large Objects from Postgres to S3
-[![Build Status](https://travis-ci.org/pgerber/lo-migrate.svg?branch=master)](https://travis-ci.org/pgerber/lo-migrate)
 
+[![Build Status](https://travis-ci.org/pgerber/lo-migrate.svg?branch=master)](https://travis-ci.org/pgerber/lo-migrate)
+[![codecov](https://codecov.io/gh/pgerber/lo-migrate/branch/master/graph/badge.svg)](https://codecov.io/gh/pgerber/lo-migrate)
 
 This software is used by [Tocco AG](https://www.tocco.ch) the creator of the
 [Tocco Business Framework](https://www.tocco.ch/software/branchenlosungen/ubersicht) to transition from

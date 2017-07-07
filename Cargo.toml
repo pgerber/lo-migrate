@@ -3,6 +3,9 @@ name = "lo_migrate"
 version = "0.1.0"
 authors = ["Peter Gerber <peter@arbitrary.ch>"]
 
+[badges]
+travis-ci = { repository = "pgerber/lo-migrate" }
+
 [dependencies]
 clap = "2.25"
 chrono = "0.4"
