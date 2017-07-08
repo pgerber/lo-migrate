@@ -104,11 +104,6 @@ impl Lo {
         self.sha2.as_ref().map(|h| h.to_hex())
     }
 
-    /// Size of Large Object (as stored in _nice_binary.size)
-    pub fn lo_size(&self) -> i64 {
-        self.size
-    }
-
     /// Take data and move ownership to caller.
     ///
     /// Data stored in [`Lo`] is replaced by [`Data::None`].
