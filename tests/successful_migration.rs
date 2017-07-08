@@ -22,7 +22,6 @@ use serialize::hex::ToHex;
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use lo_migrate::thread::{Committer, Counter, Observer, Storer, Receiver, ThreadStat};
-use log::LogLevel;
 
 // sha256 hashes of clean_data.sql sorted by OID (DB column data)
 const SHA256_HEX: [&str; 5] = ["b80184fdaee065cb31e1f2417bb14412ceb819cf57a46246ec5b4f8da95ef268",
@@ -37,7 +36,7 @@ const MIME_TYPES: [&str; 5] = ["", "octet/stream", "octet/stream", "text/plain",
 /// Test complete migration from Postgres to S3
 #[test]
 fn migration() {
-    simple_logger::init_with_level(LogLevel::Debug).unwrap();
+    simple_logger::init().unwrap();
 
     let stats = ThreadStat::new();
     let pg_conn = postgres_conn();
