@@ -43,5 +43,6 @@ default = ["unstable"]
 
 [[bin]]
 name = "lo_migrate_cli"
+path = "src/main.rs"
 test = false
 doc = false
