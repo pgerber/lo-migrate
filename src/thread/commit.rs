@@ -54,7 +54,7 @@ impl<'a> Committer<'a> {
     }
 
     fn receive_next_chunk(rx: &Receiver<Lo>, lo_chunk: &mut [Lo]) -> usize {
-        for (i, mut item) in lo_chunk.iter_mut().enumerate() {
+        for (i, item) in lo_chunk.iter_mut().enumerate() {
             match rx.recv() {
                 Ok(lo) => *item = lo,
                 _ => return i,
