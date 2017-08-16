@@ -73,6 +73,9 @@ impl<'a> Monitor<'a> {
         let mut total = None;
 
         loop {
+            // show stats one last time if there is nothing left to do
+            let cancel = self.wait_for_at_most(interval, cancel_interval).is_err();
+
             if remaining.is_none() {
                 // only fetch once to avoid locking
                 remaining = *self.stats.lo_remaining.lock().expect("failed to aquire lock");
@@ -99,9 +102,12 @@ impl<'a> Monitor<'a> {
             };
 
             println!("*******************************************************************");
-            println!("    Status at {} (updated every: {}s)",
-                     chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-                     interval.as_secs());
+            print!("    Status at {}",
+                   chrono::Local::now().format("%Y-%m-%d %H:%M:%S"));
+            match cancel {
+                true => println!(" (final stats)"),
+                false => println!(" (updated every: {}s)", interval.as_secs())
+            }
             println!();
 
             println!("Progress Overview:");
@@ -161,7 +167,7 @@ impl<'a> Monitor<'a> {
             before = now;
 
             // thread cancellation point
-            if self.wait_for_at_most(interval, cancel_interval).is_err() {
+            if cancel {
                 info!("all queues have seized to exist, nothing left to monitor, terminating \
                            thread");
                 break;
