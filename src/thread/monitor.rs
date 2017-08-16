@@ -78,12 +78,12 @@ impl<'a> Monitor<'a> {
 
             if remaining.is_none() {
                 // only fetch once to avoid locking
-                remaining = *self.stats.lo_remaining.lock().expect("failed to aquire lock");
+                remaining = *self.stats.lo_remaining.lock().expect("failed to acquire lock");
             }
 
             if total.is_none() {
                 // only fetch once to avoid locking
-                total = *self.stats.lo_total.lock().expect("failed to aquire lock");
+                total = *self.stats.lo_total.lock().expect("failed to acquire lock");
             }
 
             let now = Stats {
@@ -104,9 +104,10 @@ impl<'a> Monitor<'a> {
             println!("*******************************************************************");
             print!("    Status at {}",
                    chrono::Local::now().format("%Y-%m-%d %H:%M:%S"));
-            match cancel {
-                true => println!(" (final stats)"),
-                false => println!(" (updated every: {}s)", interval.as_secs())
+            if cancel {
+                println!(" (final stats)");
+            } else {
+                println!(" (updated every: {}s)", interval.as_secs());
             }
             println!();
 
