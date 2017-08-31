@@ -121,9 +121,10 @@ impl<'a, D> Read for DigestReader<'a, D>
 mod tests {
     extern crate postgres;
     extern crate rand;
+    extern crate sha2;
 
     use super::*;
-    use sha2::{Digest, Sha256};
+    use self::sha2::{Digest, Sha256};
 
     #[test]
     fn sha2_reader_partially_stale_buffer() {
