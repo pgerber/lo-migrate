@@ -47,6 +47,7 @@ script:
   - '[[ "$TRAVIS_RUST_VERSION" = "nightly" ]] || cargo rustc --bin lo_migrate_cli -- -D warnings'
 
   # build using clippy (only on nightly)
+  - '[[ "$TRAVIS_RUST_VERSION" != "nightly" ]] || cargo update -p clippy'
   - '[[ "$TRAVIS_RUST_VERSION" != "nightly" ]] || cargo rustc --no-default-features --features "integer_atomics clippy" --lib -- -D warnings'
   - '[[ "$TRAVIS_RUST_VERSION" != "nightly" ]] || cargo rustc --features clippy --lib -- -D warnings'
   - '[[ "$TRAVIS_RUST_VERSION" != "nightly" ]] || cargo rustc --features clippy --bin lo_migrate_cli -- -D warnings'
