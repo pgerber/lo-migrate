@@ -2,7 +2,7 @@ language: rust
 sudo: required
 rust:
   - nightly
-  - nightly-2017-05-30
+  - nightly-2017-09-09
   # lo-migrate currently depends on nightly features
   # - beta
   # - stable
@@ -78,6 +78,6 @@ after_success:
         echo "Uploaded code coverage"
     fi
 
-# matrix:
-#   allow_failures:
-#     - rust: nightly
+matrix:
+  allow_failures:
+    - rust: nightly
