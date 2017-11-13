@@ -107,6 +107,10 @@ impl ThreadStat {
         self.lo_committed.load(Ordering::Relaxed)
     }
 
+    pub fn lo_failed(&self) -> u64 {
+        self.lo_failed.load(Ordering::Relaxed)
+    }
+
     /// True if threads have been cancelled
     pub fn is_cancelled(&self) -> bool {
         self.cancelled.load(Ordering::Relaxed)

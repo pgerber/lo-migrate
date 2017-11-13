@@ -54,13 +54,15 @@ impl<'a> Observer<'a> {
 
         match sha1 {
             Ok(ref sha1) if sha1.len() != 20 => {
-                warn!("encountered _nice_binary entry with invalid hash {:?}: incorrect length",
-                      sha1_hex)
+                error!("encountered _nice_binary entry with invalid hash {:?}: incorrect length",
+                        sha1_hex);
+                self.stats.lo_failed.fetch_add(1, Ordering::Relaxed);
             }
             Err(e) => {
-                warn!("encountered _nice_binary entry with invalid hash {:?}: {}",
+                error!("encountered _nice_binary entry with invalid hash {:?}: {}",
                       sha1_hex,
-                      e)
+                      e);
+                self.stats.lo_failed.fetch_add(1, Ordering::Relaxed);
             }
             Ok(sha1) => {
                 let lo = Lo::new(sha1, oid, size, mime_type);

@@ -10,6 +10,7 @@ use self::aws_sdk_rust::aws::s3::endpoint::{Endpoint, Signature};
 use self::aws_sdk_rust::aws::s3::s3client::S3Client;
 use self::hyper::{Client, Url};
 use self::rand::Rng;
+use lo_migrate::thread::ThreadStat;
 
 /// create connection to Postgres
 #[cfg(feature = "postgres_tests")]
@@ -47,4 +48,14 @@ pub fn s3_conn() -> (S3Client<ParametersProvider, Client>, String) {
     client.create_bucket(&req).unwrap();
 
     (client, bucket_name)
+}
+
+pub fn extract_stats(stats: &ThreadStat) -> (Option<u64>, Option<u64>, u64, u64, u64, u64, u64) {
+    (stats.lo_total(),
+     stats.lo_remaining(),
+     stats.lo_observed(),
+     stats.lo_received(),
+     stats.lo_stored(),
+     stats.lo_committed(),
+     stats.lo_failed())
 }

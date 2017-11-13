@@ -1,6 +1,6 @@
 //! Fetching Large Objects from Postgres
 
-use error::Result;
+use error::{MigrationError, Result};
 use lo::{Data, Lo};
 use mkstemp::TempFile;
 use postgres::Connection;
@@ -11,6 +11,8 @@ use std::convert::TryInto;
 use std::env;
 use std::io;
 use std::io::{Read, Write};
+use sha1::Sha1;
+use serialize::hex::ToHex;
 
 impl Lo {
     /// Retrieve Large Object data
@@ -24,8 +26,7 @@ impl Lo {
         where D: Digest + Default
     {
         if self.lo_data().is_none() {
-            let data = self.retrieve_lo_data_internal::<D>(conn, size_threshold)?;
-            self.set_lo_data(data);
+            self.retrieve_lo_data_internal::<D>(conn, size_threshold)?;
         };
         Ok(self.lo_data())
     }
@@ -33,12 +34,12 @@ impl Lo {
     fn retrieve_lo_data_internal<D>(&mut self,
                                     conn: &Connection,
                                     size_threshold: i64)
-                                    -> Result<Data>
+                                    -> Result<()>
         where D: Digest + Default
     {
         let trans = conn.transaction()?;
         let mut large_object = trans.open_large_object(self.oid(), Mode::Read)?;
-        let mut sha2_reader: DigestReader<D> = DigestReader::new(&mut large_object);
+        let mut sha_reader: DigestReader<D> = DigestReader::new(&mut large_object);
 
         let (data, size) = if self.size() <= size_threshold {
             // keep binary data in memory
@@ -51,7 +52,7 @@ impl Lo {
             let size = self.size() as usize;
 
             let mut data = Vec::with_capacity(size);
-            let size = io::copy(&mut sha2_reader, &mut data)?;
+            let size = io::copy(&mut sha_reader, &mut data)?;
             (Data::Vector(data), size)
         } else {
             // keep binary data in temporary file
@@ -59,7 +60,7 @@ impl Lo {
             temp_path.push("lo_migrate.XXXXXX");
             let mut temp_file =
                 TempFile::new(temp_path.to_str().expect("tempdir not a UTF-8 path"), true)?;
-            let size = io::copy(&mut sha2_reader, &mut temp_file)?;
+            let size = io::copy(&mut sha_reader, &mut temp_file)?;
             temp_file.flush()?;
             (Data::File(temp_file), size)
         };
@@ -67,15 +68,14 @@ impl Lo {
         #[cfg_attr(feature = "clippy", allow(cast_possible_wrap))]
         #[cfg_attr(feature = "clippy", allow(cast_sign_loss))]
         let expected_size = self.size() as u64;
-        if expected_size != size {
-            warn!("size of binary read ({} bytes) differs from size according to \
-                   _nice_binary.size ({} bytes).",
-                  size,
-                  self.size());
-        };
-
-        self.set_sha2(sha2_reader.hash());
-        Ok(data)
+        let (sha1, new_hash) = sha_reader.hashes();
+        if expected_size == size && &sha1 == self.sha1() {
+            self.set_sha2(new_hash);
+            self.set_lo_data(data);
+            Ok(())
+        } else {
+            Err(MigrationError::InvalidObject(format!("Expected object with hash {} of size {} bytes but found {:?}", sha1.to_hex(), size, self)))
+        }
     }
 }
 
@@ -84,6 +84,7 @@ struct DigestReader<'a, D>
     where D: Digest
 {
     hasher: D,
+    sha1_hasher: Sha1,
     inner: &'a mut Read,
 }
 
@@ -95,15 +96,18 @@ impl<'a, D> DigestReader<'a, D>
     {
         DigestReader {
             hasher: Default::default(),
+            sha1_hasher: Default::default(),
             inner: inner,
         }
     }
 
-    /// Returns the hash of all data passed through the reader
+    /// Returns the hashes of all data passed through the reader
     ///
-    /// This operation consumes the reader.
-    fn hash(self) -> Vec<u8> {
-        self.hasher.result().into_iter().collect()
+    /// Return a tuble with the legacy sha1 hash and the new sha2 hash.
+    fn hashes(self) -> (Vec<u8>, Vec<u8>) {
+        let old = self.sha1_hasher.result().into_iter().collect();
+        let new = self.hasher.result().into_iter().collect();
+        (old, new)
     }
 }
 
@@ -113,6 +117,7 @@ impl<'a, D> Read for DigestReader<'a, D>
     fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
         let size = self.inner.read(&mut buf)?;
         self.hasher.input(&buf[..size]);
+        self.sha1_hasher.input(&buf[..size]);
         Ok(size)
     }
 }
@@ -136,11 +141,15 @@ mod tests {
         assert_eq!(&buf, b"12345");
         assert_eq!(sha2_reader.read(&mut buf).unwrap(), 4);
         assert_eq!(&buf[..4], b"6789");
-        assert_hash_correct(&sha2_reader.hash(), data);
+        let (sha1, sha2) = sha2_reader.hashes();
+        assert_hash_correct::<Sha1>(&sha1, data);
+        assert_hash_correct::<Sha256>(&sha2, data);
     }
 
-    fn assert_hash_correct(hash: &[u8], data: &[u8]) {
-        let mut hasher = Sha256::default();
+    fn assert_hash_correct<Hasher>(hash: &[u8], data: &[u8])
+        where Hasher: Digest
+    {
+        let mut hasher: Hasher = Default::default();
         hasher.input(data);
         assert_eq!(hash[..], hasher.result()[..]);
     }

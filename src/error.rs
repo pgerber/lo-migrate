@@ -25,6 +25,9 @@ pub enum MigrationError {
     SendError(SendError<Lo>),
     /// Thread cancelled error
     ThreadCancelled,
+    /// Invalid object
+    #[error(msg_embedded, no_from, non_std)]
+    InvalidObject(String)
 }
 
 impl MigrationError {

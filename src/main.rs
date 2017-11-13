@@ -463,6 +463,12 @@ fn main() {
                   ensure all binary are transferred to S3");
         process::exit(1);
     }
+    if thread_stat.lo_failed() > 0 {
+        println!();
+        println!("ERROR: At least one object failed to be migrated. Rerun the migration and check /
+                  for errors.");
+        process::exit(1);
+    }
     print!("Adding NOT NULL constraint and UNIQUE INDEX ... ");
     if args.finalize {
         add_constraints(&connect_to_postgres(&args.postgres_url, 1)

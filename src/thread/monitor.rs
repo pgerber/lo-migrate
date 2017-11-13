@@ -111,6 +111,12 @@ impl<'a> Monitor<'a> {
             }
             println!();
 
+            let failed = self.stats.lo_failed.load(Ordering::Relaxed);
+            if failed > 0 {
+                println!();
+                println!("FAILED OBJECTS: {}", failed);
+            }
+
             println!("Progress Overview:");
             Self::print_progress_overview(&mut io::stdout(),
                                           now.lo_committed,

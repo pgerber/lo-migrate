@@ -26,15 +26,7 @@ VALUES
                                             '0000000000000000000000000000000000000000000000000000000000000000'),
     ('da39a3ee5e6b4b0d3255bfef95601890afd80709',    0, 'octet/stream', 198485883, null),
     ('4694849b7ceeae0e5254689ff1f352735581d6ec',   12, 'text/plain',   198485884, null),
-
-        -- hash too short
-    ('392007d934dd54600110b683f5e52aeeedb1',  125, 'octet/stream', 198485882, null),
-
-    ('d0706a2d42b415eaf546865acf6287fc8ac1f0e5',   81, 'octet/stream', 198485885, null),
-
-        -- invalid hash (not hex)
-    ('d0706a2d42b415eaX546865acf6287fc8ac1f0e5',   81, 'octet/stream', 198485885, null);
-
+    ('d0706a2d42b415eaf546865acf6287fc8ac1f0e5',   81, 'octet/stream', 198485885, null);
 BEGIN;
 
 SELECT pg_catalog.lo_open('198485881', 131072);

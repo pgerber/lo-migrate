@@ -36,13 +36,20 @@ impl<'a> Receiver<'a> {
             trace!("processing large object: {:?}", lo);
 
             // retrieve Large Object from Postgres
-            lo.retrieve_lo_data::<D>(self.conn, size_threshold)?;
+            match lo.retrieve_lo_data::<D>(self.conn, size_threshold) {
+                Ok(_) => {
+                    // global counter of received objects
+                    self.stats.lo_received.fetch_add(1, Ordering::Relaxed);
 
-            // global counter of received objects
-            self.stats.lo_received.fetch_add(1, Ordering::Relaxed);
-
-            // pass on `Lo` to storer thread
-            tx.send(lo)?;
+                    // pass on `Lo` to storer thread
+                    tx.send(lo)?;
+                },
+                Err(e @ MigrationError::InvalidObject(_)) => {
+                    error!("Failed to fetch object: {}.", e);
+                    self.stats.lo_failed.fetch_add(1, Ordering::Relaxed);
+                },
+                Err(e) => return Err(e)
+            }
 
             // thread cancellation point
             self.stats.cancellation_point()?;

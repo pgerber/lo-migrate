@@ -49,31 +49,31 @@ fn migration() {
     let counter = Counter::new(&stats, &pg_conn);
     counter.start_worker().unwrap();
     // 7 and 8 include two invalid hashes
-    assert_eq!(extract_stats(&stats), (Some(8), Some(7), 0, 0, 0, 0));
+    assert_eq!(extract_stats(&stats), (Some(6), Some(5), 0, 0, 0, 0, 0));
 
     // get list of large objects
     let (rcv_tx, rcv_rx) = queue::unbounded();
     let observer = Observer::new(&stats, &pg_conn);
     observer.start_worker(Arc::new(rcv_tx), 1024).unwrap();
-    assert_eq!(extract_stats(&stats), (Some(8), Some(7), 5, 0, 0, 0));
+    assert_eq!(extract_stats(&stats), (Some(6), Some(5), 5, 0, 0, 0, 0));
 
     // fetch large objects from postgres
     let (str_tx, str_rx) = queue::unbounded();
     let receiver = Receiver::new(&stats, &pg_conn);
     receiver.start_worker::<Sha256>(Arc::new(rcv_rx), Arc::new(str_tx), 28).unwrap();
-    assert_eq!(extract_stats(&stats), (Some(8), Some(7), 5, 5, 0, 0));
+    assert_eq!(extract_stats(&stats), (Some(6), Some(5), 5, 5, 0, 0, 0));
 
     // store objects to S3
     let (cmt_tx, cmt_rx) = queue::unbounded();
     let storer = Storer::new(&stats);
     storer.start_worker(Arc::new(str_rx), Arc::new(cmt_tx), &s3_client, &bucket_name)
         .unwrap();
-    assert_eq!(extract_stats(&stats), (Some(8), Some(7), 5, 5, 5, 0));
+    assert_eq!(extract_stats(&stats), (Some(6), Some(5), 5, 5, 5, 0, 0));
 
     // commit sha256 hashes to postgres
     let committer = Committer::new(&stats, &pg_conn);
     committer.start_worker(Arc::new(cmt_rx), 2).unwrap();
-    assert_eq!(extract_stats(&stats), (Some(8), Some(7), 5, 5, 5, 5));
+    assert_eq!(extract_stats(&stats), (Some(6), Some(5), 5, 5, 5, 5, 0));
 
     // verify sha256 hashes
     let sha2_hashes: Vec<String> = pg_conn.query("SELECT sha2 FROM _nice_binary WHERE sha2 <> \
@@ -107,13 +107,4 @@ fn assert_object_in_store(client: &S3Client<ParametersProvider, Client>,
 
     assert_eq!(expected_sha256, &actual_sha256.result().to_hex());
     assert_eq!(&response.content_type, mime);
-}
-
-fn extract_stats(stats: &ThreadStat) -> (Option<u64>, Option<u64>, u64, u64, u64, u64) {
-    (stats.lo_total(),
-     stats.lo_remaining(),
-     stats.lo_observed(),
-     stats.lo_received(),
-     stats.lo_stored(),
-     stats.lo_committed())
 }
