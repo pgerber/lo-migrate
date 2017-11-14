@@ -1,5 +1,4 @@
 #![cfg(feature = "postgres_tests")]
-#![cfg(feature = "s3_tests")]
 
 extern crate lo_migrate;
 extern crate log;
@@ -35,11 +34,11 @@ fn invalid_data() {
     let (rcv_tx, rcv_rx) = queue::unbounded();
     let observer = Observer::new(&stats, &pg_conn);
     observer.start_worker(Arc::new(rcv_tx), 1024).unwrap();
-    assert_eq!(extract_stats(&stats), (Some(3), Some(3), 1, 0, 0, 0, 2));
+    assert_eq!(extract_stats(&stats), (Some(4), Some(4), 2, 0, 0, 0, 2));
 
     // fetch large objects from postgres
     let (str_tx, str_rx) = queue::unbounded();
     let receiver = Receiver::new(&stats, &pg_conn);
     receiver.start_worker::<Sha256>(Arc::new(rcv_rx), Arc::new(str_tx), 28).unwrap();
-    assert_eq!(extract_stats(&stats), (Some(3), Some(3), 1, 0, 0, 0, 3));
+    assert_eq!(extract_stats(&stats), (Some(4), Some(4), 2, 0, 0, 0, 4));
 }

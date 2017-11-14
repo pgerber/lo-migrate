@@ -7,6 +7,8 @@
 //! * Calculate sha2 hashes
 //! * commit sha2 hashes to Postgres
 
+#![feature(box_patterns)]
+
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 
