@@ -5,6 +5,7 @@
 //! it pushes the [`Lo`]s storer thread.
 
 use postgres::Connection;
+use postgres::error::{Error as PgError, SqlState};
 use digest::Digest;
 use error::Result;
 use two_lock_queue;
@@ -46,6 +47,10 @@ impl<'a> Receiver<'a> {
                 },
                 Err(e @ MigrationError::InvalidObject(_)) => {
                     error!("Failed to fetch object: {}.", e);
+                    self.stats.lo_failed.fetch_add(1, Ordering::Relaxed);
+                },
+                Err(MigrationError::PgError(PgError::Db(box ref db_err))) if db_err.code == SqlState::UndefinedObject => {
+                    error!("Object with loid {} missing in database.", lo.oid());
                     self.stats.lo_failed.fetch_add(1, Ordering::Relaxed);
                 },
                 Err(e) => return Err(e)

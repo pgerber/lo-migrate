@@ -25,7 +25,10 @@ VALUES
     ('0000000042b415eaf546865acf6287fc8ac1f0e5',   81, 'octet/stream', 198485885, null),
 
         -- invalid hash (not hex)
-    ('d0706a2d42b415eaX546865acf6287fc8ac1f0e5',   81, 'octet/stream', 198485886, null);
+    ('d0706a2d42b415eaX546865acf6287fc8ac1f0e5',   81, 'octet/stream', 198485886, null),
+
+        -- missing Large Object
+    ('d66f1ca50b9fbfb44f3190beca607da08f18a842', 133, '', 198485887, null);
 
 BEGIN;
 
