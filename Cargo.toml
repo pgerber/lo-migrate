@@ -7,13 +7,13 @@ authors = ["Peter Gerber <peter@arbitrary.ch>"]
 travis-ci = { repository = "pgerber/lo-migrate" }
 
 [dependencies]
-clap = "2.26"
+clap = "2.29"
 chrono = "0.4"
 derive-error = "0.0"
-digest = "0.6"
+digest = "0.7"
 fallible-iterator = "0.1"
-sha-1 = "0.4"
-sha2 = "0.6"
+sha-1 = "0.7"
+sha2 = "0.7"
 postgres = "0.14"
 postgres_large_object = "0.6"
 aws-sdk-rust = "0.1"
@@ -25,11 +25,11 @@ memmap = "0.5"
 hyper = "0.10"
 log = "0.3"
 env_logger = "0.4"
-url = "1.5"
+url = "1.6"
 hyper-rustls = "0.6"
 
 [dev-dependencies]
-rand = "0.3"
+rand = "0.4"
 regex = "0.2"
 simple_logger = "0.4"
 

@@ -65,7 +65,7 @@ extern crate mkstemp;
 extern crate postgres;
 extern crate postgres_large_object;
 extern crate rustc_serialize as serialize;
-extern crate sha_1 as sha1;
+extern crate sha1;
 extern crate memmap;
 extern crate hyper;
 #[macro_use]
