@@ -5,8 +5,9 @@ use lo::{Data, Lo};
 use s3::s3client::S3Client;
 use s3::object::PutObjectRequest;
 use aws::common::credentials::AwsCredentialsProvider;
-use memmap::{Mmap, Protection};
+use memmap::Mmap;
 use hyper::client::Client;
+use std::fs::File;
 
 impl Lo {
     /// Store Large Object on S3
@@ -22,15 +23,14 @@ impl Lo {
                 // TODO:
                 // Our AWS S3 library takes `&[u8]` as object content, it really should use trait
                 // `Read`. To avoid excessive memory use, the file is mapped into memory for now.
-                let mapped_file = Mmap::open_path(temp.path(), Protection::Read)?;
-
+                let file = File::open(&temp.path())?;
                 let data = unsafe {
                     // This is considered unsafe because the mapped file may be altered
                     // concurrently, violating Rust's safety guarantees. However, this shouldn't
                     // happen unintentionally with a temporary file.
-                    mapped_file.as_slice()
+                    Mmap::map(&file)?
                 };
-                self.store_read_data(data, client, bucket)
+                self.store_read_data(&data, client, bucket)
             }
             Data::Vector(ref data) => self.store_read_data(data, client, bucket),
             Data::None => panic!("Large Object must be fetched first"),
