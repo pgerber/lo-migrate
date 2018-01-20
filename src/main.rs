@@ -322,7 +322,7 @@ fn main() {
     // create observer thread
     {
         let thread_stat = thread_stat.clone();
-        let tx = rcv_tx.clone();
+        let tx = Arc::clone(&rcv_tx);
         threads.push(thread::Builder::new()
             .name("observer".to_string())
             .spawn(move || {
@@ -338,8 +338,8 @@ fn main() {
     // create receiver threads
     for (no, conn) in receiver_pg_conns.into_iter().enumerate() {
         let thread_stat = thread_stat.clone();
-        let rx = rcv_rx.clone();
-        let tx = str_tx.clone();
+        let rx = Arc::clone(&rcv_rx);
+        let tx = Arc::clone(&str_tx);
         let max_in_memory = args.max_in_memory;
         let name = format!("receiver_{}", no);
         threads.push(thread::Builder::new()
@@ -357,8 +357,8 @@ fn main() {
     // create storer threads
     for (no, conn) in storer_s3_conns.into_iter().enumerate() {
         let thread_stat = thread_stat.clone();
-        let rx = str_rx.clone();
-        let tx = cmt_tx.clone();
+        let rx = Arc::clone(&str_rx);
+        let tx = Arc::clone(&cmt_tx);
         let bucket_name = args.s3_bucket_name.to_string();
         let name = format!("storer_{}", no);
         threads.push(thread::Builder::new()
@@ -376,7 +376,7 @@ fn main() {
     // create committer thread
     for (no, conn) in committer_pg_conns.into_iter().enumerate() {
         let thread_stat = thread_stat.clone();
-        let rx = cmt_rx.clone();
+        let rx = Arc::clone(&cmt_rx);
         let commit_chunk_size = args.commit_chunk_size;
         let name = format!("committer_{}", no);
         threads.push(thread::Builder::new()
