@@ -16,16 +16,16 @@ sha-1 = "0.7"
 sha2 = "0.7"
 postgres = "0.14"
 postgres_large_object = "0.6"
-aws-sdk-rust = "0.1"
+rusoto_core = { git = "https://github.com/rusoto/rusoto", rev = "bd458ff256094f612d94f24aea21a47f8cc26c61" }
+rusoto_credential = { git = "https://github.com/rusoto/rusoto", rev = "bd458ff256094f612d94f24aea21a47f8cc26c61" }
+rusoto_s3 = { git = "https://github.com/rusoto/rusoto", rev = "bd458ff256094f612d94f24aea21a47f8cc26c61" }
 rustc-serialize = "0.3"
 two-lock-queue = "0.1"
 clippy = { version = "*", optional = true }
 mkstemp-rs = "0.0"
-memmap = "0.6"
 hyper = "0.10"
 log = "0.3"
 env_logger = "0.4"
-url = "1.6"
 hyper-rustls = "0.6"
 
 [dev-dependencies]

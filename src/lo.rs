@@ -133,7 +133,7 @@ impl Lo {
 
     /// Size of object according to _nice_binary.size
     pub fn size(&self) -> i64 {
-        self.size
+            self.size
     }
 }
 

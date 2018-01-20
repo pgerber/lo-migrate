@@ -1,15 +1,15 @@
-extern crate aws_sdk_rust;
+extern crate hyper;
 extern crate postgres;
 extern crate rand;
-extern crate hyper;
+extern crate rusoto_core;
+extern crate rusoto_credential;
+extern crate rusoto_s3;
 
-use self::aws_sdk_rust::aws::common::credentials::ParametersProvider;
-use self::aws_sdk_rust::aws::common::region::Region;
-use self::aws_sdk_rust::aws::s3::bucket::CreateBucketRequest;
-use self::aws_sdk_rust::aws::s3::endpoint::{Endpoint, Signature};
-use self::aws_sdk_rust::aws::s3::s3client::S3Client;
-use self::hyper::{Client, Url};
+use self::hyper::Client;
 use self::rand::Rng;
+use self::rusoto_core::region::Region;
+use self::rusoto_credential::StaticProvider;
+use self::rusoto_s3::{CreateBucketRequest, S3, S3Client};
 use lo_migrate::thread::ThreadStat;
 
 /// create connection to Postgres
@@ -29,20 +29,13 @@ pub fn postgres_conn() -> postgres::Connection {
 
 /// create connection to S3
 #[cfg(feature = "s3_tests")]
-pub fn s3_conn() -> (S3Client<ParametersProvider, Client>, String) {
+pub fn s3_conn() -> (S3Client<StaticProvider, Client>, String) {
     let bucket_name: String = rand::thread_rng().gen_ascii_chars().take(63).collect();
 
-    let endpoint = Endpoint {
-        region: Region::ApNortheast1,
-        signature: Signature::V4,
-        endpoint: Some(Url::parse("http://localhost:8080").unwrap()),
-        proxy: None,
-        user_agent: None,
-        is_bucket_virtual: true,
-    };
-
-    let provider = ParametersProvider::with_parameters("access_key", "secret_key", None).unwrap();
-    let client = S3Client::new(provider, endpoint);
+    let region = Region::Custom { name: "eu-east-3".to_owned(), endpoint: "http://localhost:8080".to_owned() };
+    let provider = StaticProvider::new_minimal("access_key".to_owned(), "secret_key".to_owned());
+    let http_client = Client::new();
+    let client = S3Client::new(http_client, provider, region);
 
     let req = CreateBucketRequest { bucket: bucket_name.clone(), ..Default::default() };
     client.create_bucket(&req).unwrap();

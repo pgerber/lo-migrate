@@ -1,7 +1,7 @@
 use error::Result;
 use hyper::client::Client;
-use s3::s3client::S3Client;
-use aws::common::credentials::AwsCredentialsProvider;
+use rusoto_credential::ProvideAwsCredentials;
+use rusoto_s3::S3Client;
 use std::sync::Arc;
 use thread::ThreadStat;
 use two_lock_queue::{Receiver, Sender};
@@ -22,7 +22,7 @@ impl<'a> Storer<'a> {
                            client: &S3Client<P, Client>,
                            bucket: &str)
                            -> Result<()>
-        where P: AwsCredentialsProvider
+        where P: ProvideAwsCredentials
     {
         // receive from receiver thread
         while let Ok(mut lo) = rx.recv() {

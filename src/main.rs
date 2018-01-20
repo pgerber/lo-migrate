@@ -1,33 +1,31 @@
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
+#![cfg_attr(feature = "clippy", feature(plugin))]
+#![cfg_attr(feature = "clippy", plugin(clippy))]
 #![feature(box_patterns)]
 
 extern crate clap;
-extern crate lo_migrate;
-extern crate postgres;
-extern crate sha2;
 extern crate env_logger;
-extern crate log;
-extern crate aws_sdk_rust;
-extern crate url;
 extern crate hyper;
-extern crate two_lock_queue;
 extern crate hyper_rustls;
+extern crate lo_migrate;
+extern crate log;
+extern crate postgres;
+extern crate rusoto_core;
+extern crate rusoto_credential;
+extern crate rusoto_s3;
+extern crate sha2;
+extern crate two_lock_queue;
 
 use postgres::{Connection, TlsMode};
 use postgres::error::Error as PgError;
 use postgres::error::SqlState;
-use url::Url;
-use aws_sdk_rust::aws::s3::s3client::S3Client;
-use aws_sdk_rust::aws::s3::endpoint::Endpoint;
-use aws_sdk_rust::aws::s3::endpoint::Signature;
-use aws_sdk_rust::aws::common::region::Region;
-use aws_sdk_rust::aws::common::credentials::ParametersProvider;
 use log::LogLevelFilter;
 use env_logger::LogBuilder;
 use hyper::client::{self, Client, RedirectPolicy};
 use hyper::net::HttpsConnector;
 use lo_migrate::thread::{Committer, Counter, Monitor, Observer, Receiver, Storer, ThreadStat};
+use rusoto_core::region::Region;
+use rusoto_credential::StaticProvider;
+use rusoto_s3::S3Client;
 use sha2::Sha256;
 use std::{env, fmt, process, thread};
 use std::str::FromStr;
@@ -222,20 +220,19 @@ fn connect_to_postgres(url: &str, count: usize) -> Vec<Connection> {
 
 fn connect_to_s3(access_key: &str,
                  secret_key: &str,
-                 endpoint: &Endpoint,
+                 region: &Region,
                  count: usize)
-                 -> Vec<S3Client<ParametersProvider, Client>> {
+                 -> Vec<S3Client<StaticProvider, Client>> {
     let mut conns = Vec::with_capacity(count);
     for _ in 0..count {
-        let credentials = ParametersProvider::with_parameters(access_key, secret_key, None)
-            .expect("Cannot connect to S3");
+        let credentials = StaticProvider::new_minimal(access_key.to_owned(), secret_key.to_owned());
         let tls = hyper_rustls::TlsClient::new();
         let connector = HttpsConnector::new(tls);
         let pool = client::pool::Pool::with_connector(client::pool::Config { max_idle: 1 },
                                                       connector);
         let mut client = Client::with_connector(pool);
         client.set_redirect_policy(RedirectPolicy::FollowNone);
-        conns.push(S3Client::with_request_dispatcher(client, credentials, endpoint.clone()));
+        conns.push(S3Client::new(client, credentials, region.clone()));
     }
     conns
 }
@@ -277,21 +274,15 @@ fn main() {
     let args = Args::new_from_env();
     println!("{}", args);
 
-    let s3_endpoint = Endpoint {
-        region: Region::ApNortheast1,
-        signature: Signature::V4,
-        endpoint: Some(Url::parse(&args.s3_url).expect("S3 url invalid")),
-        proxy: None,
-        user_agent: None,
-        is_bucket_virtual: true,
-    };
+
+    let s3_region = Region::Custom { name: "eu-east-3".to_owned(), endpoint: args.s3_url.to_owned() };
 
     let observer_pg_conns = connect_to_postgres(&args.postgres_url,
                                                 1 /* multiple threads not supported */);
     let receiver_pg_conns = connect_to_postgres(&args.postgres_url, args.receiver_threads);
     let storer_s3_conns = connect_to_s3(&args.s3_access_key,
                                         &args.s3_secret_key,
-                                        &s3_endpoint,
+                                        &s3_region,
                                         args.storer_threads);
     let committer_pg_conns = connect_to_postgres(&args.postgres_url, args.committer_threads);
     let counter_pg_conns = connect_to_postgres(&args.postgres_url,

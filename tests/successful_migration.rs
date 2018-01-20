@@ -1,11 +1,12 @@
 #![cfg(feature = "postgres_tests")]
 #![cfg(feature = "s3_tests")]
 
-extern crate aws_sdk_rust;
 extern crate hyper;
 extern crate lo_migrate;
 extern crate log;
 extern crate postgres;
+extern crate rusoto_credential;
+extern crate rusoto_s3;
 extern crate rustc_serialize as serialize;
 extern crate sha2;
 extern crate simple_logger;
@@ -14,14 +15,13 @@ extern crate two_lock_queue as queue;
 mod common;
 use common::*;
 
-use aws_sdk_rust::aws::common::credentials::ParametersProvider;
-use aws_sdk_rust::aws::s3::object::GetObjectRequest;
-use aws_sdk_rust::aws::s3::s3client::S3Client;
 use hyper::Client;
+use rusoto_credential::StaticProvider;
+use rusoto_s3::{GetObjectRequest, S3, S3Client};
 use serialize::hex::ToHex;
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
-use lo_migrate::thread::{Committer, Counter, Observer, Storer, Receiver, ThreadStat};
+use lo_migrate::thread::{Committer, Counter, Observer, Receiver, Storer, ThreadStat};
 
 // sha256 hashes of clean_data.sql sorted by OID (DB column data)
 const SHA256_HEX: [&str; 5] = ["b80184fdaee065cb31e1f2417bb14412ceb819cf57a46246ec5b4f8da95ef268",
@@ -92,7 +92,7 @@ fn migration() {
     }
 }
 
-fn assert_object_in_store(client: &S3Client<ParametersProvider, Client>,
+fn assert_object_in_store(client: &S3Client<StaticProvider, Client>,
                           bucket_name: &str,
                           expected_sha256: &str,
                           mime: &str) {
@@ -101,10 +101,12 @@ fn assert_object_in_store(client: &S3Client<ParametersProvider, Client>,
         key: expected_sha256.to_string(),
         ..Default::default()
     };
-    let response = client.get_object(&request, None).unwrap();
+    let response = client.get_object(&request).unwrap();
     let mut actual_sha256 = Sha256::default();
-    actual_sha256.input(response.get_body());
+    let mut body = Vec::new();
+    response.body.unwrap().read_to_end(&mut body).unwrap();
+    actual_sha256.input(&body);
 
     assert_eq!(expected_sha256, &actual_sha256.result().to_hex());
-    assert_eq!(&response.content_type, mime);
+    assert_eq!(&response.content_type.unwrap(), mime);
 }

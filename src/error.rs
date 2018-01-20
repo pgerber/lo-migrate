@@ -1,7 +1,7 @@
 //! Error handling
 
 use postgres;
-use aws::errors::s3;
+use rusoto_s3::PutObjectError;
 use std::io;
 use std::result;
 use std::sync::mpsc::SendError;
@@ -19,8 +19,8 @@ pub enum MigrationError {
     PgConnError(postgres::error::ConnectError),
     /// Postgres error
     PgError(postgres::error::Error),
-    /// AWS S3 error
-    S3Error(s3::S3Error),
+    /// Failed to store object
+    PutObjectError(PutObjectError),
     /// Queue send error
     SendError(SendError<Lo>),
     /// Thread cancelled error

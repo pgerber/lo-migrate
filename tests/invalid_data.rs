@@ -17,7 +17,7 @@ use lo_migrate::thread::{Counter, Observer, Receiver, ThreadStat};
 /// Test complete migration from Postgres to S3
 #[test]
 fn invalid_data() {
-   simple_logger::init().unwrap();
+    simple_logger::init().unwrap();
 
     let stats = ThreadStat::new();
     let pg_conn = postgres_conn();

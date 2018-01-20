@@ -55,21 +55,22 @@
 #![cfg_attr(feature = "clippy", deny(wrong_pub_self_convention))]
 #![cfg_attr(feature = "clippy", deny(wrong_self_convention))]
 
-extern crate aws_sdk_rust;
 extern crate chrono;
 #[macro_use]
 extern crate derive_error;
 extern crate digest;
 extern crate fallible_iterator;
-extern crate mkstemp;
-extern crate postgres;
-extern crate postgres_large_object;
-extern crate rustc_serialize as serialize;
-extern crate sha1;
-extern crate memmap;
 extern crate hyper;
 #[macro_use]
 extern crate log;
+extern crate mkstemp;
+extern crate postgres;
+extern crate postgres_large_object;
+extern crate rusoto_core;
+extern crate rusoto_credential;
+extern crate rusoto_s3;
+extern crate rustc_serialize as serialize;
+extern crate sha1;
 extern crate two_lock_queue;
 
 mod commit;
@@ -79,8 +80,5 @@ mod store;
 mod receive;
 pub mod thread;
 pub mod utils;
-
-use aws_sdk_rust::aws::s3;
-use aws_sdk_rust::aws;
 
 pub use lo::Lo;
