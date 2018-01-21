@@ -175,11 +175,11 @@ mod tests {
         conn.batch_execute(include_str!("../tests/clean_data.sql")).unwrap();
 
         // keep object in memory
-        let mut lo = Lo::new("43fe96d43c21d1f86780f47b28fe24f142c395d9".from_hex().unwrap(),
+        let mut lo = Lo::new("ca837095b8e962525b988bd98afff27d104d7107".from_hex().unwrap(),
                              198485881,
-                             6842,
+                             10 * 1024 * 1024,
                              "text/test".to_string());
-        let data = lo.retrieve_lo_data::<Sha256>(&conn, 6842).unwrap();
+        let data = lo.retrieve_lo_data::<Sha256>(&conn, 10 * 1024 * 1024).unwrap();
         assert!(if let Data::Vector(_) = *data {
             true
         } else {
@@ -187,11 +187,11 @@ mod tests {
         });
 
         // keep object in temporary file
-        let mut lo = Lo::new("43fe96d43c21d1f86780f47b28fe24f142c395d9".from_hex().unwrap(),
+        let mut lo = Lo::new("ca837095b8e962525b988bd98afff27d104d7107".from_hex().unwrap(),
                              198485881,
-                             6842,
+                             10 * 1024 * 1024,
                              "text/test".to_string());
-        let data = lo.retrieve_lo_data::<Sha256>(&conn, 6483).unwrap();
+        let data = lo.retrieve_lo_data::<Sha256>(&conn, 10 * 1024 * 1024 - 1).unwrap();
         assert!(if let Data::File(_) = *data {
             true
         } else {

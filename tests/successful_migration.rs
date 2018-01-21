@@ -24,7 +24,7 @@ use std::sync::Arc;
 use lo_migrate::thread::{Committer, Counter, Observer, Receiver, Storer, ThreadStat};
 
 // sha256 hashes of clean_data.sql sorted by OID (DB column data)
-const SHA256_HEX: [&str; 5] = ["b80184fdaee065cb31e1f2417bb14412ceb819cf57a46246ec5b4f8da95ef268",
+const SHA256_HEX: [&str; 5] = ["927927d87145e11e602a5cab6d2b6d5d533764f844de45efb776931f2cc7c742",
                                "e86ae2fd5056fcd75f6a9ed884fdc23d880be6d5de6159901e564ed19b12aa00",
                                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                                "e97a63c34bb2299e977ec5aea161f49ffdd3c6a719c8838504e20f8a8db85ae2",
@@ -65,7 +65,7 @@ fn migration() {
 
     // store objects to S3
     let (cmt_tx, cmt_rx) = queue::unbounded();
-    let storer = Storer::new(&stats);
+    let storer = Storer::new(&stats, 5 * 1024 * 1024 + 3);
     storer.start_worker(Arc::new(str_rx), Arc::new(cmt_tx), &s3_client, &bucket_name)
         .unwrap();
     assert_eq!(extract_stats(&stats), (Some(6), Some(5), 5, 5, 5, 0, 0));

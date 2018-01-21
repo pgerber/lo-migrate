@@ -9,11 +9,12 @@ use super::*;
 
 pub struct Storer<'a> {
     stats: &'a ThreadStat,
+    chunk_size: usize,
 }
 
 impl<'a> Storer<'a> {
-    pub fn new(thread_stat: &'a ThreadStat) -> Self {
-        Storer { stats: thread_stat }
+    pub fn new(thread_stat: &'a ThreadStat, chunk_size: usize) -> Self {
+        Storer { stats: thread_stat, chunk_size }
     }
 
     pub fn start_worker<P>(&self,
@@ -29,7 +30,7 @@ impl<'a> Storer<'a> {
             trace!("processing large object: {:?}", lo);
 
             // store data on S3
-            lo.store(client, bucket)?;
+            lo.store(client, bucket, self.chunk_size)?;
 
             // global counter of stored objects
             self.stats.lo_stored.fetch_add(1, Ordering::Relaxed);

@@ -47,6 +47,7 @@ struct Args {
     storer_queue: usize,
     committer_queue: usize,
     max_in_memory: i64,
+    upload_chunk_size: usize,
     commit_chunk_size: usize,
     monitor_interval: u64,
     finalize: bool,
@@ -113,8 +114,17 @@ impl Args {
                 .help("Size of the committer queue"))
             .arg(Arg::with_name("max_in_memory")
                 .long("in-mem-max")
-                .value_name("INT")
-                .help("Max. size of Large Object to keep in memory (in KiB)"))
+                .value_name("SIZE")
+                .help("Max. size of an object kept in memory (in kiB). Larger objects are \
+                       written to a buffer file. Keep in mind that all objects in the storer queue \
+                       use up to this much memory."))
+            .arg(Arg::with_name("upload_chunk_size")
+                .long("upload-chunk-size")
+                .value_name("SIZE")
+                 .help("Size, in kiB, of one part when using multipart upload. Beware that even \
+                        when using file-based buffers, SIZE kIB are held in memory by every storer \
+                        thread. Also, multipart upload is only enabled for object buffered in \
+                        files. All other objects are already in memory anyway."))
             .arg(Arg::with_name("commit_chunk_size")
                 .long("commit-chunk")
                 .value_name("INT")
@@ -158,6 +168,14 @@ impl Args {
                 .map_or(1024,
                         |i| i64::from_str(i).expect("maximum in-memory size invalid")) *
                            1024,
+            upload_chunk_size: matches.value_of("upload_chunk_size")
+                .map_or(20_971_520, // 20 MiB
+                        |i| {
+                            let v = usize::from_str(i).expect("upload chunk size invalid") * 1024;
+                            assert!(v >= 5_242_880,
+                                    "upload chunk size must be at least 5 MiB but is only {}", v);
+                            v
+                        }),
             commit_chunk_size: Self::expect_greater_zero(matches.value_of("commit_chunk_size"),
                                                          100,
                                                          "commit check size invalid"),
@@ -186,26 +204,19 @@ impl Args {
 
 impl fmt::Display for Args {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "**************** configuration ****************\n")?;
-        write!(f, "  threads:\n")?;
-        write!(f, "    receiver threads:  {:4}\n", self.receiver_threads)?;
-        write!(f, "    storer threads:    {:4}\n", self.storer_threads)?;
-        write!(f, "    committer threads: {:4}\n", self.committer_threads)?;
-        write!(f, "  queues\n")?;
-        write!(f,
-               "    receiver queue size: {:6} objects\n",
-               self.receiver_queue)?;
-        write!(f,
-               "    storer queue size:   {:6} objects\n",
-               self.storer_queue)?;
-        write!(f,
-               "    committer threads:   {:6} objects\n",
-               self.committer_queue)?;
-        write!(f, "  other:\n")?;
-        write!(f,
-               "    max. in-memory size: {} KiB\n",
-               self.max_in_memory / 1024)?;
-        write!(f, "    DB commit chunk size: {}\n", self.commit_chunk_size)
+        writeln!(f, "**************** configuration ****************")?;
+        writeln!(f, "  threads:")?;
+        writeln!(f, "    receiver threads:  {:4}", self.receiver_threads)?;
+        writeln!(f, "    storer threads:    {:4}", self.storer_threads)?;
+        writeln!(f, "    committer threads: {:4}", self.committer_threads)?;
+        writeln!(f, "  queues")?;
+        writeln!(f, "    receiver queue size: {:6} objects", self.receiver_queue)?;
+        writeln!(f, "    storer queue size:   {:6} objects", self.storer_queue)?;
+        writeln!(f, "    committer threads:   {:6} objects", self.committer_queue)?;
+        writeln!(f, "  other:")?;
+        writeln!(f, "    max. in-memory size: {} KiB", self.max_in_memory / 1024)?;
+        writeln!(f, "    multipart upload part size: {} kiB", self.upload_chunk_size / 1024)?;
+        writeln!(f, "    DB commit chunk size: {}", self.commit_chunk_size)
     }
 }
 
@@ -352,10 +363,11 @@ fn main() {
         let tx = Arc::clone(&cmt_tx);
         let bucket_name = args.s3_bucket_name.to_string();
         let name = format!("storer_{}", no);
+        let upload_chunk_size = args.upload_chunk_size;
         threads.push(thread::Builder::new()
             .name(name.clone())
             .spawn(move || {
-                let storer = Storer::new(&thread_stat);
+                let storer = Storer::new(&thread_stat, upload_chunk_size);
                 let result = storer.start_worker(rx, tx, &conn, &bucket_name);
                 if let Err(e) = result {
                     handle_thread_error(&e, &name);
