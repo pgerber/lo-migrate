@@ -21,7 +21,6 @@ fn invalid_data() {
 
     let stats = ThreadStat::new();
     let pg_conn = postgres_conn();
-    let (s3_client, bucket_name) = s3_conn();
 
     // create database
     pg_conn.batch_execute(include_str!("invalid_data.sql")).unwrap();
@@ -37,7 +36,7 @@ fn invalid_data() {
     assert_eq!(extract_stats(&stats), (Some(4), Some(4), 2, 0, 0, 0, 2));
 
     // fetch large objects from postgres
-    let (str_tx, str_rx) = queue::unbounded();
+    let (str_tx, _str_rx) = queue::unbounded();
     let receiver = Receiver::new(&stats, &pg_conn);
     receiver.start_worker::<Sha256>(Arc::new(rcv_rx), Arc::new(str_tx), 28).unwrap();
     assert_eq!(extract_stats(&stats), (Some(4), Some(4), 2, 0, 0, 0, 4));
