@@ -65,7 +65,6 @@ changes may be introduced at any time. You may want to install a particular veri
 compiling. See also [Troubleshooting](#troubleshooting).
 
 1. install [rustup](https://www.rustup.rs/) (use default settings)
-2. install nightly: `$ rustup toolchain install nightly-2017-09-09`
 3. clone this repository: `$ git clone https://github.com/pgerber/lo-migrate.git`
 4. cd into the newly checked out repository: `$ cd lo-migrate`
 5. build the code:  `$ cargo build --release`
