@@ -16,10 +16,9 @@ extern crate sha2;
 extern crate two_lock_queue;
 
 use postgres::{Connection, TlsMode};
-use postgres::error::Error as PgError;
-use postgres::error::SqlState;
-use log::LogLevelFilter;
-use env_logger::LogBuilder;
+use postgres::error::{self as sql_error, Error as PgError};
+use log::LevelFilter as LogLevelFilter;
+use env_logger::Builder as LogBuilder;
 use hyper::client::{self, Client, RedirectPolicy};
 use hyper::net::HttpsConnector;
 use lo_migrate::thread::{Committer, Counter, Monitor, Observer, Receiver, Storer, ThreadStat};
@@ -260,7 +259,11 @@ fn handle_thread_error(error: &MigrationError, thread_name: &str) {
 
 fn add_sha2_column(pg_client: &Connection) -> Result<(), PgError> {
     match pg_client.batch_execute("ALTER TABLE _nice_binary ADD COLUMN sha2 CHAR(64)") {
-        Err(PgError::Db(box ref db_err)) if db_err.code == SqlState::DuplicateColumn => {
+        Err(ref err)
+            if err.as_db()
+                .map(|e| e.code == sql_error::DUPLICATE_COLUMN)
+                .unwrap_or(false) =>
+        {
             Ok(()) // ignore existing "sha2" column
         }
         r => r,
@@ -280,7 +283,7 @@ fn main() {
     if let Ok(env) = env::var("RUST_LOG") {
         log_builder.parse(&env);
     }
-    log_builder.init().unwrap();
+    log_builder.init();
 
     let args = Args::new_from_env();
     println!("{}", args);

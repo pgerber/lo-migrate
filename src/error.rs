@@ -21,8 +21,6 @@ pub enum MigrationError {
     /// I/O error
     IoError(io::Error),
     /// Postgres connection error
-    PgConnError(postgres::error::ConnectError),
-    /// Postgres error
     PgError(postgres::error::Error),
     /// Failed to store object
     PutObjectError(PutObjectError),

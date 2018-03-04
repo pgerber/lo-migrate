@@ -5,7 +5,7 @@
 //! it pushes the [`Lo`]s storer thread.
 
 use postgres::Connection;
-use postgres::error::{Error as PgError, SqlState};
+use postgres::error as sql_error;
 use digest::Digest;
 use error::Result;
 use two_lock_queue;
@@ -44,16 +44,20 @@ impl<'a> Receiver<'a> {
 
                     // pass on `Lo` to storer thread
                     tx.send(lo)?;
-                },
+                }
                 Err(e @ MigrationError::InvalidObject(_)) => {
                     error!("Failed to fetch object: {}.", e);
                     self.stats.lo_failed.fetch_add(1, Ordering::Relaxed);
-                },
-                Err(MigrationError::PgError(PgError::Db(box ref db_err))) if db_err.code == SqlState::UndefinedObject => {
+                }
+                Err(MigrationError::PgError(ref err))
+                    if err.as_db()
+                        .map(|e| e.code == sql_error::UNDEFINED_OBJECT)
+                        .unwrap_or(false) =>
+                {
                     error!("Object with loid {} missing in database.", lo.oid());
                     self.stats.lo_failed.fetch_add(1, Ordering::Relaxed);
-                },
-                Err(e) => return Err(e)
+                }
+                Err(e) => return Err(e),
             }
 
             // thread cancellation point
