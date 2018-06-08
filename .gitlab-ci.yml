@@ -1,0 +1,21 @@
+.job_template: &template
+  environment:
+    RUST_BACKTRACE: '1'
+  services:
+    - ceph/demo:latest
+    - postgres:latest
+  script:
+  - rustc --version && cargo --version
+  - cargo test --all --verbose
+
+nightly:
+  <<: *template
+  image: "rust:latest"
+  environment:
+    RUST_VERSION: stable
+
+# stable:
+#   <<: *template
+#   image: "rust:latest"
+#   environment:
+#     RUST_VERSION: beta
